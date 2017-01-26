@@ -14,9 +14,26 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
+<!--
+  THIS FILE DIFFERS FROM THE ORIGINAL FROM Android Open Source Project
+
+  Copyright (C) 2017 Michael A. MacDonald
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.android.uamp" >
+    package="com.antlersoft.patchyamp" >
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -48,7 +65,7 @@
 
         <!-- Main activity for music browsing on phone -->
         <activity
-            android:name=".ui.MusicPlayerActivity"
+            android:name="com.example.android.uamp.ui.MusicPlayerActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -64,20 +81,20 @@
 
         <!-- Placeholder activity for phone UI -->
         <activity
-            android:name=".ui.PlaceholderActivity"
+            android:name="com.example.android.uamp.ui.PlaceholderActivity"
             android:label="@string/app_name">
         </activity>
 
         <!-- Proxy activity that opens either the NowPlaying TV or the mobile UI, depending on
         the current environment -->
         <activity
-            android:name=".ui.NowPlayingActivity"
+            android:name="com.example.android.uamp.ui.NowPlayingActivity"
             android:icon="@drawable/ic_launcher">
         </activity>
 
         <!-- Main activity for Android TV user interface -->
         <activity
-            android:name=".ui.tv.TvBrowseActivity"
+            android:name="com.example.android.uamp.ui.tv.TvBrowseActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.UAmp.TVLeanback" >
             <intent-filter>
@@ -87,15 +104,15 @@
         </activity>
 
         <activity
-            android:name=".ui.tv.TvVerticalGridActivity"
+            android:name="com.example.android.uamp.ui.tv.TvVerticalGridActivity"
             android:theme="@style/Theme.UAmp.TVLeanback"
-            android:parentActivityName=".ui.tv.TvBrowseActivity" />
+            android:parentActivityName="com.example.android.uamp.ui.tv.TvBrowseActivity" />
 
         <!-- Android TV UI when playing a song -->
         <activity
-            android:name=".ui.tv.TvPlaybackActivity"
+            android:name="com.example.android.uamp.ui.tv.TvPlaybackActivity"
             android:theme="@style/Theme.UAmp.TVLeanback"
-            android:parentActivityName=".ui.tv.TvBrowseActivity" />
+            android:parentActivityName="com.example.android.uamp.ui.tv.TvBrowseActivity" />
 
         <!--
              (OPTIONAL) use this meta data to indicate which icon should be
@@ -129,7 +146,7 @@
          consumers through MediaBrowserService and MediaSession. Consumers connect to it through
          MediaBrowser (for browsing) and MediaController (for play session control) -->
         <service
-            android:name=".MusicService"
+            android:name="com.example.android.uamp.MusicService"
             android:exported="true"
             tools:ignore="ExportedService">
             <intent-filter>
@@ -147,13 +164,13 @@
         <!-- A full screen activity showing controls and a seek bar for
              the current playing music -->
         <activity
-            android:name=".ui.FullScreenPlayerActivity"
+            android:name="com.example.android.uamp.ui.FullScreenPlayerActivity"
             android:label="@string/app_name"
             android:launchMode="singleTop"
-            android:parentActivityName=".ui.MusicPlayerActivity">
+            android:parentActivityName="com.example.android.uamp.ui.MusicPlayerActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".ui.MusicPlayerActivity"/>
+                android:value="com.example.android.uamp.ui.MusicPlayerActivity"/>
         </activity>
 
         <!-- A receiver that will receive media buttons and send as
