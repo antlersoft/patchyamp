@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Michael A. MacDonald
  *
- * MODIFICATION OF CODE ORIGINALLY RELEASESD BY Android Open Source Project
+ * MODIFICATION OF CODE ORIGINALLY RELEASED BY Android Open Source Project
  * UNDER THE SAME LICENSE
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.media.MediaRouter;
 
+import com.antlersoft.patchyamp.AmpacheSource;
 import com.antlersoft.patchyamp.R;
 
 import com.example.android.uamp.model.MusicProvider;
@@ -179,7 +180,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
         super.onCreate();
         LogHelper.d(TAG, "onCreate");
 
-        mMusicProvider = new MusicProvider();
+        mMusicProvider = new MusicProvider(new AmpacheSource(getApplicationContext()));
 
         // To make the app more responsive, fetch and cache catalog information now.
         // This can help improve the response time in the method

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Michael A. MacDonald
  *
- * MODIFICATION OF CODE ORIGINALLY RELEASESD BY Android Open Source Project
+ * MODIFICATION OF CODE ORIGINALLY RELEASED BY Android Open Source Project
  * UNDER THE SAME LICENSE
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,9 +85,6 @@ public class MusicProvider {
         void onMusicCatalogReady(boolean success);
     }
 
-    public MusicProvider() {
-        this(new RemoteJSONSource());
-    }
     public MusicProvider(MusicProviderSource source) {
         mSource = source;
         mMusicListByGenre = new ConcurrentHashMap<>();
