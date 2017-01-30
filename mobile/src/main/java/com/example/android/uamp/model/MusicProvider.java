@@ -39,6 +39,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
@@ -292,11 +293,11 @@ public class MusicProvider {
     }
 
 
-    public List<MediaBrowserCompat.MediaItem> getChildren(String mediaId, Resources resources) {
+    public void getChildren(String mediaId, Resources resources, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
         List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
 
         if (!MediaIDHelper.isBrowseable(mediaId)) {
-            return mediaItems;
+            result.sendResult(mediaItems);
         }
 
         if (MEDIA_ID_ROOT.equals(mediaId)) {
@@ -316,7 +317,7 @@ public class MusicProvider {
         } else {
             LogHelper.w(TAG, "Skipping unmatched mediaId: ", mediaId);
         }
-        return mediaItems;
+        result.sendResult(mediaItems);
     }
 
     private MediaBrowserCompat.MediaItem createBrowsableMediaItemForRoot(Resources resources) {
