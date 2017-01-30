@@ -16,11 +16,20 @@
 
 package com.example.android.uamp.model;
 
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import java.util.Iterator;
+import java.util.List;
 
 public interface MusicProviderSource {
     String CUSTOM_METADATA_TRACK_SOURCE = "__SOURCE__";
+    String PLAYLIST_PREFIX = "__PLAYLIST_";
+    interface MediaItemFromId {
+        MediaBrowserCompat.MediaItem getItem(String id);
+    }
     Iterator<MediaMetadataCompat> iterator();
+    void GetPlaylists(final MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
+    void GetPlaylistSongs(final String playListId, final MediaItemFromId toGet, final MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
 }

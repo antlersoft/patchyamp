@@ -16,10 +16,15 @@
 package com.antlersoft.patchyamp;
 
 import android.content.Context;
+import android.net.Uri;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaBrowserServiceCompat;
+import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import com.antoniotari.reactiveampache.Exceptions.AmpacheApiException;
 import com.antoniotari.reactiveampache.api.AmpacheApi;
+import com.antoniotari.reactiveampache.models.Playlist;
 import com.antoniotari.reactiveampache.models.Song;
 import com.antoniotari.reactiveampache.models.Tag;
 import com.example.android.uamp.model.MusicProviderSource;
@@ -37,7 +42,7 @@ import java.util.List;
  */
 
 public class AmpacheSource implements MusicProviderSource {
-    static String TAG = LogHelper.makeLogTag(AmpacheSource.class);
+    static final String TAG = LogHelper.makeLogTag(AmpacheSource.class);
     Object mLock = new Object();
     private EAmpacheState mState = EAmpacheState.INITIAL;
     private List<Song> mSongs;
@@ -163,6 +168,45 @@ public class AmpacheSource implements MusicProviderSource {
             LogHelper.e(TAG, "Failed to retrieve list of songs");
             return new ArrayList<MediaMetadataCompat>().iterator();
         }
+    }
+
+    @Override
+    public void GetPlaylists(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+        final ArrayList<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+
+        AmpacheApi.INSTANCE.getPlaylists().subscribe(playlists -> {
+            for (Playlist pl : playlists) {
+                MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
+                        .setMediaId(PLAYLIST_PREFIX+pl.getId())
+                        .setTitle(pl.getName())
+                        .setSubtitle(pl.getType())
+                        .setIconUri(Uri.parse("android.resource://" +
+                                "com.antlersoft.patchyamp/drawable/ic_by_genre"))
+                        .build();
+                items.add(new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE));
+            }
+            result.sendResult(items);
+        },
+                throwable -> {
+                    onError(throwable);
+                    result.sendResult(items);
+                });
+   }
+
+    @Override
+    public void GetPlaylistSongs(String playListId, MediaItemFromId toGet, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+        final ArrayList<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+
+        AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe(songs -> {
+                    for (Song s : songs) {
+                        items.add(toGet.getItem(s.getId()));
+                    }
+                    result.sendResult(items);
+                },
+                throwable -> {
+                    onError(throwable);
+                    result.sendResult(items);
+                });
     }
 
     public void onError(Throwable throwable) {
