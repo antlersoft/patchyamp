@@ -44,6 +44,7 @@ import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import com.antlersoft.patchyamp.R;
+import com.example.android.uamp.playback.QueueManager;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
 
@@ -57,6 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_GENRE;
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_SEARCH;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_PLAYLISTS;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_ROOT;
 import static com.example.android.uamp.utils.MediaIDHelper.createMediaID;
@@ -294,7 +296,7 @@ public class MusicProvider {
     }
 
 
-    public void getChildren(String mediaId, Resources resources, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+    public void getChildren(String mediaId, Resources resources, QueueManager queueManager, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
         List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
 
         if (!MediaIDHelper.isBrowseable(mediaId)) {
@@ -313,12 +315,14 @@ public class MusicProvider {
             mSource.GetPlaylists(result);
             return;
         } else if (mediaId.startsWith(MusicProviderSource.PLAYLIST_PREFIX)) {
-            mSource.GetPlaylistSongs(mediaId.substring(MusicProviderSource.PLAYLIST_PREFIX.length()), songId -> createMediaItem(getMusic(songId)), result);
+            String playListId = mediaId.substring(MusicProviderSource.PLAYLIST_PREFIX.length());
+            mSource.GetPlaylistSongs(playListId, songId -> getMusic(songId), m -> createMediaItem(m, MEDIA_ID_MUSICS_BY_SEARCH, playListId),
+                    (title, items) -> {queueManager.setCurrentQueueFromBrowse(title, items, MEDIA_ID_MUSICS_BY_SEARCH, playListId);}, result);
             return;
         } else if (mediaId.startsWith(MEDIA_ID_MUSICS_BY_GENRE)) {
             String genre = MediaIDHelper.getHierarchy(mediaId)[1];
             for (MediaMetadataCompat metadata : getMusicsByGenre(genre)) {
-                mediaItems.add(createMediaItem(metadata));
+                mediaItems.add(createMediaItem(metadata, null, null));
             }
 
         } else {
@@ -362,14 +366,17 @@ public class MusicProvider {
                 MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 
-    private MediaBrowserCompat.MediaItem createMediaItem(MediaMetadataCompat metadata) {
+    private MediaBrowserCompat.MediaItem createMediaItem(MediaMetadataCompat metadata, String keyName, String idInKey) {
         // Since mediaMetadata fields are immutable, we need to create a copy, so we
         // can set a hierarchy-aware mediaID. We will need to know the media hierarchy
         // when we get a onPlayFromMusicID call, so we can create the proper queue based
         // on where the music was selected from (by artist, by genre, random, etc)
-        String genre = metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE);
+        if (keyName == null)
+            keyName = MEDIA_ID_MUSICS_BY_GENRE;
+        if (idInKey == null)
+            idInKey = metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE);
         String hierarchyAwareMediaID = MediaIDHelper.createMediaID(
-                metadata.getDescription().getMediaId(), MEDIA_ID_MUSICS_BY_GENRE, genre);
+                metadata.getDescription().getMediaId(), keyName, idInKey);
         MediaMetadataCompat copy = new MediaMetadataCompat.Builder(metadata)
                 .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, hierarchyAwareMediaID)
                 .build();

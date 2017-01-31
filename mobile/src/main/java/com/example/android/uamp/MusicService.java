@@ -165,6 +165,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
     private final DelayedStopHandler mDelayedStopHandler = new DelayedStopHandler(this);
     private MediaRouter mMediaRouter;
     private PackageValidator mPackageValidator;
+    private QueueManager mQueueManager;
     private SessionManager mCastSessionManager;
     private SessionManagerListener<CastSession> mCastSessionManagerListener;
 
@@ -189,7 +190,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
 
         mPackageValidator = new PackageValidator(this);
 
-        QueueManager queueManager = new QueueManager(mMusicProvider, getResources(),
+        mQueueManager = new QueueManager(mMusicProvider, getResources(),
                 new QueueManager.MetadataUpdateListener() {
                     @Override
                     public void onMetadataChanged(MediaMetadataCompat metadata) {
@@ -216,7 +217,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
                 });
 
         LocalPlayback playback = new LocalPlayback(this, mMusicProvider);
-        mPlaybackManager = new PlaybackManager(this, getResources(), mMusicProvider, queueManager,
+        mPlaybackManager = new PlaybackManager(this, getResources(), mMusicProvider, mQueueManager,
                 playback);
 
         // Start a new MediaSession
@@ -349,14 +350,14 @@ public class MusicService extends MediaBrowserServiceCompat implements
         } else if (mMusicProvider.isInitialized()) {
             result.detach();
             // if music library is ready, return immediately
-            mMusicProvider.getChildren(parentMediaId, getResources(), result);
+            mMusicProvider.getChildren(parentMediaId, getResources(), mQueueManager, result);
         } else {
             // otherwise, only return results when the music library is retrieved
             result.detach();
             mMusicProvider.retrieveMediaAsync(new MusicProvider.Callback() {
                 @Override
                 public void onMusicCatalogReady(boolean success) {
-                    mMusicProvider.getChildren(parentMediaId, getResources(), result);
+                    mMusicProvider.getChildren(parentMediaId, getResources(), null, result);
                 }
             });
         }

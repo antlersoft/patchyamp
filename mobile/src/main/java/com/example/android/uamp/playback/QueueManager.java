@@ -38,6 +38,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 
@@ -51,6 +52,7 @@ import com.example.android.uamp.utils.QueueHelper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -182,6 +184,11 @@ public class QueueManager {
 
     protected void setCurrentQueue(String title, List<MediaSessionCompat.QueueItem> newQueue) {
         setCurrentQueue(title, newQueue, null);
+    }
+
+    public void setCurrentQueueFromBrowse(final String title, final Iterable<MediaMetadataCompat> items, String keyId, String idInKey)
+    {
+        setCurrentQueue(title, QueueHelper.convertToQueue(items, keyId, idInKey));
     }
 
     protected void setCurrentQueue(String title, List<MediaSessionCompat.QueueItem> newQueue,

@@ -194,14 +194,38 @@ public class AmpacheSource implements MusicProviderSource {
    }
 
     @Override
-    public void GetPlaylistSongs(String playListId, MediaItemFromId toGet, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+    public void GetPlaylistSongs(String playListId, final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
         final ArrayList<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
 
         AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe(songs -> {
                     for (Song s : songs) {
-                        items.add(toGet.getItem(s.getId()));
+                        items.add(toItem.getItem(toGet.getMetadata(s.getId())));
                     }
                     result.sendResult(items);
+                    if (toSetQueue != null) {
+                        toSetQueue.setCurrentQueueFromBrowse("Playlist", new Iterable<MediaMetadataCompat>() {
+                            public Iterator<MediaMetadataCompat> iterator() {
+                                return new Iterator<MediaMetadataCompat>() {
+                                    private Iterator<Song> mSi = songs.iterator();
+
+                                    @Override
+                                    public boolean hasNext() {
+                                        return mSi.hasNext();
+                                    }
+
+                                    @Override
+                                    public MediaMetadataCompat next() {
+                                        return toGet.getMetadata(mSi.next().getId());
+                                    }
+
+                                    @Override
+                                    public void remove() {
+
+                                    }
+                                };
+                            }
+                        });
+                    }
                 },
                 throwable -> {
                     onError(throwable);

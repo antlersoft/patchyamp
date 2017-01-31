@@ -26,10 +26,16 @@ import java.util.List;
 public interface MusicProviderSource {
     String CUSTOM_METADATA_TRACK_SOURCE = "__SOURCE__";
     String PLAYLIST_PREFIX = "__PLAYLIST_";
-    interface MediaItemFromId {
-        MediaBrowserCompat.MediaItem getItem(String id);
+    interface MediaMetadataCompatFromId {
+        MediaMetadataCompat getMetadata(String id);
+    }
+    interface ItemFromMetadata {
+        MediaBrowserCompat.MediaItem getItem(MediaMetadataCompat meta);
+    }
+    interface SetQueueDirectly {
+        void setCurrentQueueFromBrowse(String title, Iterable<MediaMetadataCompat> items);
     }
     Iterator<MediaMetadataCompat> iterator();
-    void GetPlaylists(final MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
-    void GetPlaylistSongs(final String playListId, final MediaItemFromId toGet, final MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
+    void GetPlaylists(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
+    void GetPlaylistSongs(String playListId, MediaMetadataCompatFromId toGet, ItemFromMetadata toItem, SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
 }
