@@ -52,7 +52,7 @@ public class AmpacheSource implements MusicProviderSource {
         synchronized (mLock) {
             mState = EAmpacheState.LOGGING_IN;
         }
-        AmpacheApi.INSTANCE.initUser("http://192.168.1.64:8942/ampache", "admin", "*****")
+        AmpacheApi.INSTANCE.initUser("http://antlersoft.no-ip.org:8942/ampache", "admin", "4rborDay")
                 .flatMap(aVoid -> AmpacheApi.INSTANCE.handshake())
                 .subscribe(handshakeResponse -> {
                     LogHelper.i(TAG, "Expiration: " + handshakeResponse.getSession_expire());
