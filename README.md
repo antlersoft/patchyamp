@@ -17,7 +17,10 @@ open-source VNC software for Android.
 
 Patchy AMP started as a fork of the UAMP sample application, and it retains its goals of working 
 across multiple form factors and providing a consistent user experience
-on Android phones, tablets, Android Auto, Android Wear, Android TV and Google Cast devices.
+on Android phones, tablets, Android Auto, Android Wear, Android TV and Google Cast devices.  It
+also will provide a robust client for Ampache music servers, with a special emphasis on
+providing support for smart playlists, which I've found are the most useful features of
+Ampache.
 
 
 Pre-requisites
@@ -59,7 +62,9 @@ submitting a pull request through GitHub. Please see CONTRIBUTING.md for more de
 License
 -------
 
-Copyright 2014 The Android Open Source Project, Inc.
+Copyright 2017 Michael A. MacDonald
+
+MODIFIED FROM FILES RELEASED UNDER SAME LICENSE BY Android Open Source Project 2014
 
 Licensed to the Apache Software Foundation (ASF) under one or more contributor
 license agreements.  See the NOTICE file distributed with this work for
