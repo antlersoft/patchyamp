@@ -1,8 +1,22 @@
-Universal Android Music Player Sample
-=====================================
+Patchy
+======
 
-This sample shows how to implement an audio media app that works
-across multiple form factors and provide a consistent user experience
+the
+
+Antlersoft
+==========
+Android
+=======
+Ampache Music Player
+====================
+
+Patchy AMP is an open-source music player for the Android platform, motivated by my
+inability to find a good Android Apache client without annoying flaws.  Patchy AMP
+is developed by antlersoft, the developer of the VNC Viewer for Android, the most successful
+open-source VNC software for Android.
+
+Patchy AMP started as a fork of the UAMP sample application, and it retains its goals of working 
+across multiple form factors and providing a consistent user experience
 on Android phones, tablets, Android Auto, Android Wear, Android TV and Google Cast devices.
 
 
