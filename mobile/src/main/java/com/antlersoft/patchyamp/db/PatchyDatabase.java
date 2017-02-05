@@ -15,9 +15,12 @@
  */
 package com.antlersoft.patchyamp.db;
 
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
+
+import java.util.ArrayList;
 
 /**
  * Database upgrader for PatchyAmp
@@ -27,6 +30,10 @@ public class PatchyDatabase extends SQLiteOpenHelper {
     static final int DBV_0_1_X = 1;
 
     public final static String TAG = PatchyDatabase.class.toString();
+
+    public PatchyDatabase(Context context) {
+        super(context, "PatchyDatabase", null, DBV_0_1_X);
+    }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -61,14 +68,13 @@ public class PatchyDatabase extends SQLiteOpenHelper {
     /**
      * Return the object representing the app global state in the database, or null
      * if the object hasn't been set up yet
-     * @param db App's database -- only needs to be readable
-     * @return Object representing the single persistent instance of MostRecentBean, which
+     * @return Object representing the single persistent instance of SavedState, which
      * is the app's global state
      */
-    SavedState getMostRecent()
+    public static SavedState getMostRecent(SQLiteDatabase db)
     {
-        ArrayList<MostRecentBean> recents = new ArrayList<MostRecentBean>(1);
-        MostRecentBean.getAll(db, MostRecentBean.GEN_TABLE_NAME, recents, MostRecentBean.GEN_NEW);
+        ArrayList<SavedState> recents = new ArrayList<>(1);
+        SavedState.getAll(db, SavedState.GEN_TABLE_NAME, recents, SavedState.GEN_NEW);
         if (recents.size() == 0)
             return null;
         return recents.get(0);

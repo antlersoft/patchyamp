@@ -9,5 +9,6 @@ enum EAmpacheState {
     LOGGING_IN,
     RETRIEVING,
     READY,
-    FAILURE
+    FAILURE,
+    NO_LOGIN_INFORMATION
 }

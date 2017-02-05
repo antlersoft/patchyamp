@@ -16,12 +16,14 @@
 package com.antlersoft.patchyamp;
 
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
+import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.antoniotari.reactiveampache.Exceptions.AmpacheApiException;
 import com.antoniotari.reactiveampache.api.AmpacheApi;
 import com.antoniotari.reactiveampache.models.Playlist;
@@ -46,13 +48,18 @@ public class AmpacheSource implements MusicProviderSource {
     Object mLock = new Object();
     private EAmpacheState mState = EAmpacheState.INITIAL;
     private List<Song> mSongs;
+    private PatchyDatabase mDbHelper;
+    ArrayList<MediaBrowserCompat.MediaItem> mItems = new ArrayList<>();
+    private String mLastPlaylistId = "";
 
     public AmpacheSource(Context context) {
+        mDbHelper = new PatchyDatabase(context);
+        SQLiteDatabase db = mDbHelper.getReadableDatabase();
         AmpacheApi.INSTANCE.initSession(context);
         synchronized (mLock) {
             mState = EAmpacheState.LOGGING_IN;
         }
-        AmpacheApi.INSTANCE.initUser("http://antlersoft.no-ip.org:8942/ampache", "admin", "4rborDay")
+        AmpacheApi.INSTANCE.initUser("http://192.168.1.64:8942/ampache", "admin", "4rborDay")
                 .flatMap(aVoid -> AmpacheApi.INSTANCE.handshake())
                 .subscribe(handshakeResponse -> {
                     LogHelper.i(TAG, "Expiration: " + handshakeResponse.getSession_expire());
@@ -191,45 +198,60 @@ public class AmpacheSource implements MusicProviderSource {
                     onError(throwable);
                     result.sendResult(items);
                 });
-   }
+    }
+
+    private void resultPlaylistSongs(final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>(mSongs.size());
+        for (Song s : mSongs) {
+            MediaMetadataCompat meta = toGet.getMetadata(s.getId());
+            if (meta == null) {
+                LogHelper.e(TAG, "No metadata found for song: "+s.toString());
+            } else {
+                items.add(toItem.getItem(meta));
+            }
+        }
+        result.sendResult(items);
+        if (toSetQueue != null) {
+            toSetQueue.setCurrentQueueFromBrowse("Playlist", new Iterable<MediaMetadataCompat>() {
+                public Iterator<MediaMetadataCompat> iterator() {
+                    return new Iterator<MediaMetadataCompat>() {
+                        private Iterator<Song> mSi = mSongs.iterator();
+
+                        @Override
+                        public boolean hasNext() {
+                            return mSi.hasNext();
+                        }
+
+                        @Override
+                        public MediaMetadataCompat next() {
+                            return toGet.getMetadata(mSi.next().getId());
+                        }
+
+                        @Override
+                        public void remove() {
+
+                        }
+                    };
+                }
+            });
+        }
+    }
 
     @Override
-    public void GetPlaylistSongs(String playListId, final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
-        final ArrayList<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+    public void GetPlaylistSongs(final String playListId, final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+        if (mLastPlaylistId.equals(playListId)) {
+            resultPlaylistSongs(toGet, toItem, toSetQueue, result);
+            return;
+        }
 
         AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe(songs -> {
-                    for (Song s : songs) {
-                        items.add(toItem.getItem(toGet.getMetadata(s.getId())));
-                    }
-                    result.sendResult(items);
-                    if (toSetQueue != null) {
-                        toSetQueue.setCurrentQueueFromBrowse("Playlist", new Iterable<MediaMetadataCompat>() {
-                            public Iterator<MediaMetadataCompat> iterator() {
-                                return new Iterator<MediaMetadataCompat>() {
-                                    private Iterator<Song> mSi = songs.iterator();
-
-                                    @Override
-                                    public boolean hasNext() {
-                                        return mSi.hasNext();
-                                    }
-
-                                    @Override
-                                    public MediaMetadataCompat next() {
-                                        return toGet.getMetadata(mSi.next().getId());
-                                    }
-
-                                    @Override
-                                    public void remove() {
-
-                                    }
-                                };
-                            }
-                        });
-                    }
+                    mSongs = songs;
+                    mLastPlaylistId = playListId;
+                    resultPlaylistSongs(toGet, toItem, toSetQueue, result);
                 },
                 throwable -> {
                     onError(throwable);
-                    result.sendResult(items);
+                    result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>(0));
                 });
     }
 

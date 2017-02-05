@@ -16,7 +16,8 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
-  --><!--
+  -->
+<!--
   Copyright (C) 2014 The Android Open Source Project
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,18 +35,29 @@
 <resources>
 
     <string name="app_name">Patchy AMP</string>
-    <string name="favorite">Favorite</string>
-    <string name="error_no_metadata">Unable to retrieve metadata.</string>
     <string name="browse_genres">Genres</string>
     <string name="browse_genre_subtitle">Songs by genre</string>
     <string name="browse_musics_by_genre_subtitle">%1$s songs</string>
-    <string name="random_queue_title">Random music</string>
-    <string name="error_no_connection">Cannot connect to server. Please, check your Internet connectivity.</string>
-    <string name="error_loading_media">Error Loading Media</string>
     <string name="casting_to_device">Casting to %1$s</string>
+    <string name="close">Close</string>
+    <string name="connection_caption">Select an Ampache connection, or enter new</string>
+    <string name="connect_button">Log in</string>
     <string name="currently_playing_song">Song currently playing</string>
     <string name="currently_playing_artist">Artist of currently playing song</string>
     <string name="currently_playing_extra_info">Extra info for currently playing song</string>
+    <string name="error_no_metadata">Unable to retrieve metadata.</string>
+    <string name="error_no_connection">Cannot connect to server. Please, check your Internet connectivity.</string>
+    <string name="error_loading_media">Error Loading Media</string>
+    <string name="favorite">Favorite</string>
+    <string name="intro_dont_show">Don\'t show again</string>
+    <string name="intro_text">Please refer to &lt;a href="https://github.com/antlersoft/patchyamp"&gt;PatchyAmp on github&lt;/a&gt; for help and more information</string>
+    <string name="intro_title">Welcome to Patchy AMP</string>
+    <string name="intro_version_text">This is early beta software.  Crashes are to be expected, and many changes should be forthcoming in the next few weeks.</string>
+    <string name="keep_password_button">Keep</string>
+    <string name="nickname_caption">Server nickname</string>
+    <string name="open_doc">Go to github page</string>
+    <string name="password_caption">Server password</string>
+    <string name="random_queue_title">Random music</string>
     <string name="play_item">Play item</string>
     <string name="play_pause">play or pause</string>
     <string name="skip_next">skip to next</string>
@@ -53,6 +65,9 @@
     <string name="touch_to_cast">Touch to connect to a Google Cast device</string>
     <!-- Use the default receiver. To customize a styled media receiver, you can use
          the css and images under <project-root>/docs/cast_styled_receiver -->
+    <string name="url_caption">Ampache URL</string>
+    <string name="username_caption">Ampache User</string>
+    <string name="username_hint">admin</string>
     <string name="cast_application_id">CC1AD845</string>
     <string name="home_title">Home</string>
     <string name="related_content_header">You may also like</string>

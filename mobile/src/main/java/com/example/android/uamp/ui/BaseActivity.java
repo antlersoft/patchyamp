@@ -46,6 +46,8 @@ import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 
+import com.antlersoft.patchyamp.IntroTextDialog;
+import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.example.android.uamp.MusicService;
 import com.antlersoft.patchyamp.R;
 import com.example.android.uamp.utils.LogHelper;
@@ -62,9 +64,13 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
     private MediaBrowserCompat mMediaBrowser;
     private PlaybackControlsFragment mControlsFragment;
 
+    PatchyDatabase mDatabase;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mDatabase = new PatchyDatabase(getApplicationContext());
 
         LogHelper.d(TAG, "Activity onCreate");
 
@@ -94,12 +100,14 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
         mControlsFragment = (PlaybackControlsFragment) getFragmentManager()
             .findFragmentById(R.id.fragment_playback_controls);
         if (mControlsFragment == null) {
-            throw new IllegalStateException("Mising fragment with id 'controls'. Cannot continue.");
+            throw new IllegalStateException("Missing fragment with id 'controls'. Cannot continue.");
         }
 
         hidePlaybackControls();
 
         mMediaBrowser.connect();
+
+        IntroTextDialog.showIntroTextIfNecessary(this, mDatabase);
     }
 
     @Override
