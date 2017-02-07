@@ -18,12 +18,15 @@ package com.antlersoft.patchyamp;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.os.Bundle;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
+import com.antlersoft.patchyamp.db.ConnectionBean;
 import com.antlersoft.patchyamp.db.PatchyDatabase;
+import com.antlersoft.patchyamp.db.SavedState;
 import com.antoniotari.reactiveampache.Exceptions.AmpacheApiException;
 import com.antoniotari.reactiveampache.api.AmpacheApi;
 import com.antoniotari.reactiveampache.models.Playlist;
@@ -46,34 +49,17 @@ import java.util.List;
 public class AmpacheSource implements MusicProviderSource {
     static final String TAG = LogHelper.makeLogTag(AmpacheSource.class);
     Object mLock = new Object();
-    private EAmpacheState mState = EAmpacheState.INITIAL;
+    private volatile EAmpacheState mState = EAmpacheState.INITIAL;
     private List<Song> mSongs;
     private PatchyDatabase mDbHelper;
     ArrayList<MediaBrowserCompat.MediaItem> mItems = new ArrayList<>();
     private String mLastPlaylistId = "";
+    private MusicProviderSource.ErrorCallback mErrorCallback;
 
     public AmpacheSource(Context context) {
         mDbHelper = new PatchyDatabase(context);
         SQLiteDatabase db = mDbHelper.getReadableDatabase();
         AmpacheApi.INSTANCE.initSession(context);
-        synchronized (mLock) {
-            mState = EAmpacheState.LOGGING_IN;
-        }
-        AmpacheApi.INSTANCE.initUser("http://192.168.1.64:8942/ampache", "admin", "4rborDay")
-                .flatMap(aVoid -> AmpacheApi.INSTANCE.handshake())
-                .subscribe(handshakeResponse -> {
-                    LogHelper.i(TAG, "Expiration: " + handshakeResponse.getSession_expire());
-                    synchronized (mLock) {
-                        mState = EAmpacheState.RETRIEVING;
-                        mLock.notifyAll();
-                    }
-                }, throwable -> {
-                    synchronized (mLock) {
-                        mState = EAmpacheState.FAILURE;
-                        mLock.notifyAll();
-                    }
-                    onError(throwable);
-                });
     }
 
     private Iterator<MediaMetadataCompat> songIterator() {
@@ -128,76 +114,124 @@ public class AmpacheSource implements MusicProviderSource {
         }
     }
 
-    @Override
-    public Iterator<MediaMetadataCompat> iterator() {
+    private void waitForInitialization()
+    {
         synchronized (mLock) {
-            if (mState == EAmpacheState.READY) {
-                return songIterator();
-            }
-            while (mState == EAmpacheState.LOGGING_IN) {
+            while (mState == EAmpacheState.LOGGING_IN || mState == EAmpacheState.RETRIEVING) {
                 patientWait(mLock);
             }
-            if (mState == EAmpacheState.READY)
-                return songIterator();
-            if (mState != EAmpacheState.RETRIEVING) {
-                LogHelper.e(TAG, "Unexpected state trying to retrieve songs: "+mState.toString());
-                return new ArrayList<MediaMetadataCompat>().iterator();
+        }
+    }
+
+    @Override
+    public State getState() {
+        switch (mState) {
+            case FAILURE:
+            case INITIAL:
+            case NO_LOGIN_INFORMATION:
+                return State.NON_INITIALIZED;
+            case LOGGING_IN:
+            case RETRIEVING:
+                return State.INITIALIZING;
+            case READY:
+                return State.INITIALIZED;
+        }
+        return State.NON_INITIALIZED;
+    }
+
+    private void retrieveAllSongs(AllSongsCallback allSongs) {
+        AmpacheApi.INSTANCE.getSongs().subscribe(songs -> {
+            mSongs = songs;
+            allSongs.onAllSongsRead(songIterator());
+            synchronized (mLock) {
+                mState = EAmpacheState.READY;
+                mLock.notifyAll();
             }
-            AmpacheApi.INSTANCE.getSongs().subscribe(songs -> {
-                        if (songs == null)
-                        {
-                            LogHelper.e(TAG, "get songs return null song list");
-                            synchronized (mLock) {
-                                mState = EAmpacheState.FAILURE;
-                                mLock.notifyAll();
-                            }
-                            return;
+        }, throwable -> {
+           allSongs.onAllSongsRead(new ArrayList<MediaMetadataCompat>().iterator());
+            synchronized (mLock) {
+                mState = EAmpacheState.FAILURE;
+                mLock.notifyAll();
+            }
+            onError(throwable);
+        });
+    }
+
+    @Override
+    public void RequestLogin(Bundle extras, AllSongsCallback allSongs, ErrorCallback error) {
+        SQLiteDatabase db = mDbHelper.getReadableDatabase();
+        SavedState state = PatchyDatabase.getMostRecent(db);
+        ConnectionBean newBean = new ConnectionBean();
+        final ConnectionBean bean = state == null ? null : (newBean.Gen_read(db, state.getCurrentConnectionId()) ? newBean : null);
+
+        AsyncRunner.RunAsync(() -> {
+                    synchronized (mLock) {
+                        while (mState == EAmpacheState.LOGGING_IN || mState == EAmpacheState.RETRIEVING) {
+                            patientWait(mLock);
                         }
-                        mSongs = songs;
+                        mErrorCallback = error;
+                        mState = EAmpacheState.LOGGING_IN;
+                        mSongs = null;
+                        mLastPlaylistId = "";
+                        mLock.notifyAll();
+                    }
+                }, () -> {
+            if (bean == null) {
+                allSongs.onAllSongsRead(new ArrayList<MediaMetadataCompat>().iterator());
+                synchronized (mState) {
+                    mState = EAmpacheState.NO_LOGIN_INFORMATION;
+                    mLock.notifyAll();
+                }
+                return;
+            }
+            AmpacheApi.INSTANCE.initUser(bean.getUrl(), bean.getLogin(), bean.getPassword())
+                    .flatMap(aVoid -> AmpacheApi.INSTANCE.handshake())
+                    .subscribe(handshakeResponse -> {
+                        LogHelper.i(TAG, "Expiration: " + handshakeResponse.getSession_expire());
                         synchronized (mLock) {
-                            mState = EAmpacheState.READY;
+                            mState = EAmpacheState.RETRIEVING;
                             mLock.notifyAll();
                         }
+                        retrieveAllSongs(allSongs);
                     }, throwable -> {
-                        onError(throwable);
                         synchronized (mLock) {
                             mState = EAmpacheState.FAILURE;
                             mLock.notifyAll();
                         }
-                    }
-            );
-            while (mState == EAmpacheState.RETRIEVING) {
-                patientWait(mLock);
-            }
-            if (mState == EAmpacheState.READY) {
-                return songIterator();
-            }
-            LogHelper.e(TAG, "Failed to retrieve list of songs");
-            return new ArrayList<MediaMetadataCompat>().iterator();
-        }
+                        onError(throwable);
+                    });
+        });
+
     }
 
     @Override
     public void GetPlaylists(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
         final ArrayList<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
 
-        AmpacheApi.INSTANCE.getPlaylists().subscribe(playlists -> {
-            for (Playlist pl : playlists) {
-                MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
-                        .setMediaId(PLAYLIST_PREFIX+pl.getId())
-                        .setTitle(pl.getName())
-                        .setSubtitle(pl.getType())
-                        .setIconUri(Uri.parse("android.resource://" +
-                                "com.antlersoft.patchyamp/drawable/ic_by_genre"))
-                        .build();
-                items.add(new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE));
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.sendResult(items);
+                return;
             }
-            result.sendResult(items);
-        },
-                throwable -> {
-                    onError(throwable);
-                    result.sendResult(items);
-                });
+
+            AmpacheApi.INSTANCE.getPlaylists().subscribe(playlists -> {
+                        for (Playlist pl : playlists) {
+                            MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
+                                    .setMediaId(PLAYLIST_PREFIX + pl.getId())
+                                    .setTitle(pl.getName())
+                                    .setSubtitle(pl.getType())
+                                    .setIconUri(Uri.parse("android.resource://" +
+                                            "com.antlersoft.patchyamp/drawable/ic_by_genre"))
+                                    .build();
+                            items.add(new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE));
+                        }
+                        result.sendResult(items);
+                    },
+                    throwable -> {
+                        onError(throwable);
+                        result.sendResult(items);
+                    });
+        });
     }
 
     private void resultPlaylistSongs(final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
@@ -243,16 +277,21 @@ public class AmpacheSource implements MusicProviderSource {
             resultPlaylistSongs(toGet, toItem, toSetQueue, result);
             return;
         }
-
-        AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe(songs -> {
-                    mSongs = songs;
-                    mLastPlaylistId = playListId;
-                    resultPlaylistSongs(toGet, toItem, toSetQueue, result);
-                },
-                throwable -> {
-                    onError(throwable);
-                    result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>(0));
-                });
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>(0));
+                return;
+            }
+            AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe(songs -> {
+                        mSongs = songs;
+                        mLastPlaylistId = playListId;
+                        resultPlaylistSongs(toGet, toItem, toSetQueue, result);
+                    },
+                    throwable -> {
+                        onError(throwable);
+                        result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>(0));
+                    });
+        });
     }
 
     public void onError(Throwable throwable) {
@@ -266,4 +305,7 @@ public class AmpacheSource implements MusicProviderSource {
             message = "Undefined error";
         }
         LogHelper.e(TAG, throwable, message);
+        if (mErrorCallback != null) {
+            mErrorCallback.onError(message, throwable);
+        }
     }}

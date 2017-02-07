@@ -50,6 +50,7 @@ import com.antlersoft.patchyamp.IntroTextDialog;
 import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.example.android.uamp.MusicService;
 import com.antlersoft.patchyamp.R;
+import com.example.android.uamp.model.MusicProvider;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.NetworkHelper;
 import com.example.android.uamp.utils.ResourceHelper;
@@ -118,6 +119,13 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
             getSupportMediaController().unregisterCallback(mMediaControllerCallback);
         }
         mMediaBrowser.disconnect();
+    }
+
+    protected void requestLogin() {
+        MediaControllerCompat c = getSupportMediaController();
+        if (c!=null) {
+            c.sendCommand(MusicProvider.LOGIN_COMMAND, null, null);
+        }
     }
 
     @Override

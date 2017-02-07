@@ -34,6 +34,7 @@
 
 package com.example.android.uamp.model;
 
+import android.os.Bundle;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -44,6 +45,18 @@ import java.util.List;
 public interface MusicProviderSource {
     String CUSTOM_METADATA_TRACK_SOURCE = "__SOURCE__";
     String PLAYLIST_PREFIX = "__PLAYLIST_";
+    enum State {
+        NON_INITIALIZED, INITIALIZING, INITIALIZED
+    }
+
+    interface ErrorCallback {
+        void onError(String message, Throwable throwable);
+    }
+
+    interface AllSongsCallback {
+        void onAllSongsRead(Iterator<MediaMetadataCompat> allSongs);
+    }
+
     interface MediaMetadataCompatFromId {
         MediaMetadataCompat getMetadata(String id);
     }
@@ -53,7 +66,9 @@ public interface MusicProviderSource {
     interface SetQueueDirectly {
         void setCurrentQueueFromBrowse(String title, Iterable<MediaMetadataCompat> items);
     }
-    Iterator<MediaMetadataCompat> iterator();
+
+    State getState();
+    void RequestLogin(Bundle extras, AllSongsCallback allSongs, ErrorCallback error);
     void GetPlaylists(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
     void GetPlaylistSongs(String playListId, MediaMetadataCompatFromId toGet, ItemFromMetadata toItem, SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
 }

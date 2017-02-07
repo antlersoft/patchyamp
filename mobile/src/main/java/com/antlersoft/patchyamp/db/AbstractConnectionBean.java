@@ -28,7 +28,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
     "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
     "NICKNAME TEXT," +
     "URL TEXT," +
-    "LOGIN INTEGER," +
+    "LOGIN TEXT," +
     "PASSWORD TEXT," +
     "VERIFIED INTEGER," +
     "KEEPPASSWORD INTEGER" +
@@ -38,7 +38,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
     private long gen__Id;
     private java.lang.String gen_nickname;
     private java.lang.String gen_url;
-    private int gen_login;
+    private java.lang.String gen_login;
     private java.lang.String gen_password;
     private boolean gen_verified;
     private boolean gen_keepPassword;
@@ -53,8 +53,8 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
     public void setNickname(java.lang.String arg_nickname) { gen_nickname = arg_nickname; }
     public java.lang.String getUrl() { return gen_url; }
     public void setUrl(java.lang.String arg_url) { gen_url = arg_url; }
-    public int getLogin() { return gen_login; }
-    public void setLogin(int arg_login) { gen_login = arg_login; }
+    public java.lang.String getLogin() { return gen_login; }
+    public void setLogin(java.lang.String arg_login) { gen_login = arg_login; }
     public java.lang.String getPassword() { return gen_password; }
     public void setPassword(java.lang.String arg_password) { gen_password = arg_password; }
     public boolean isVerified() { return gen_verified; }
@@ -67,7 +67,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         values.put(GEN_FIELD__ID,Long.toString(this.gen__Id));
         values.put(GEN_FIELD_NICKNAME,this.gen_nickname);
         values.put(GEN_FIELD_URL,this.gen_url);
-        values.put(GEN_FIELD_LOGIN,Integer.toString(this.gen_login));
+        values.put(GEN_FIELD_LOGIN,this.gen_login);
         values.put(GEN_FIELD_PASSWORD,this.gen_password);
         values.put(GEN_FIELD_VERIFIED,(this.gen_verified ? "1" : "0"));
         values.put(GEN_FIELD_KEEPPASSWORD,(this.gen_keepPassword ? "1" : "0"));
@@ -109,7 +109,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
             gen_url = cursor.getString(columnIndices[GEN_ID_URL]);
         }
         if ( columnIndices[GEN_ID_LOGIN] >= 0 && ! cursor.isNull(columnIndices[GEN_ID_LOGIN])) {
-            gen_login = (int)cursor.getInt(columnIndices[GEN_ID_LOGIN]);
+            gen_login = cursor.getString(columnIndices[GEN_ID_LOGIN]);
         }
         if ( columnIndices[GEN_ID_PASSWORD] >= 0 && ! cursor.isNull(columnIndices[GEN_ID_PASSWORD])) {
             gen_password = cursor.getString(columnIndices[GEN_ID_PASSWORD]);
@@ -129,7 +129,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         gen__Id = values.getAsLong(GEN_FIELD__ID);
         gen_nickname = values.getAsString(GEN_FIELD_NICKNAME);
         gen_url = values.getAsString(GEN_FIELD_URL);
-        gen_login = (int)values.getAsInteger(GEN_FIELD_LOGIN);
+        gen_login = values.getAsString(GEN_FIELD_LOGIN);
         gen_password = values.getAsString(GEN_FIELD_PASSWORD);
         gen_verified = (values.getAsInteger(GEN_FIELD_VERIFIED) != 0);
         gen_keepPassword = (values.getAsInteger(GEN_FIELD_KEEPPASSWORD) != 0);
