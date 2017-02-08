@@ -57,6 +57,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.antlersoft.patchyamp.R;
+import com.example.android.uamp.model.MusicProvider;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
 import com.example.android.uamp.utils.NetworkHelper;
@@ -123,6 +124,14 @@ public class MediaBrowserFragment extends Fragment {
             LogHelper.d(TAG, "Received state change: ", state);
             checkForUserVisibleErrors(false);
             mBrowserAdapter.notifyDataSetChanged();
+        }
+
+        @Override
+        public void onSessionEvent(String event, Bundle extras) {
+            if (event.equals(MusicProvider.ERROR_REPORT_EVENT) && extras != null) {
+                String message = extras.getString(MusicProvider.ERROR_REPORT_EVENT_MESSAGE, "Unknown message");
+                Toast.makeText(getActivity(), message, Toast.LENGTH_LONG);
+            }
         }
     };
 
@@ -247,6 +256,14 @@ public class MediaBrowserFragment extends Fragment {
         if (isDetached()) {
             return;
         }
+
+        // Add MediaController callback so we can redraw the list when metadata changes:
+        MediaControllerCompat controller = ((FragmentActivity) getActivity())
+                .getSupportMediaController();
+        if (controller != null) {
+            controller.registerCallback(mMediaControllerCallback);
+        }
+
         mMediaId = getMediaId();
         if (mMediaId == null) {
             mMediaId = mMediaFragmentListener.getMediaBrowser().getRoot();
@@ -265,13 +282,6 @@ public class MediaBrowserFragment extends Fragment {
         mMediaFragmentListener.getMediaBrowser().unsubscribe(mMediaId);
 
         mMediaFragmentListener.getMediaBrowser().subscribe(mMediaId, mSubscriptionCallback);
-
-        // Add MediaController callback so we can redraw the list when metadata changes:
-        MediaControllerCompat controller = ((FragmentActivity) getActivity())
-                .getSupportMediaController();
-        if (controller != null) {
-            controller.registerCallback(mMediaControllerCallback);
-        }
     }
 
     private void checkForUserVisibleErrors(boolean forceError) {

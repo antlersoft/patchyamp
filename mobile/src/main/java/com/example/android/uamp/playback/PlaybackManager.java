@@ -37,6 +37,7 @@ package com.example.android.uamp.playback;
 import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.ResultReceiver;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.media.session.MediaSessionCompat;
@@ -44,6 +45,7 @@ import android.support.v4.media.session.PlaybackStateCompat;
 
 import com.antlersoft.patchyamp.R;
 import com.example.android.uamp.model.MusicProvider;
+import com.example.android.uamp.model.MusicProviderSource;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
 import com.example.android.uamp.utils.WearHelper;
@@ -281,6 +283,19 @@ public class PlaybackManager implements Playback.Callback {
 
 
     private class MediaSessionCallback extends MediaSessionCompat.Callback {
+        @Override
+        public void onCommand(String command, Bundle extras, ResultReceiver cb) {
+            super.onCommand(command, extras, cb);
+            if (command.equals(MusicProvider.NEEDS_LOGIN_COMMAND)) {
+                cb.send(mMusicProvider.getState() == MusicProviderSource.State.NON_INITIALIZED ? 1 : 0, null);
+            } else if (command.equals(MusicProvider.LOGIN_COMMAND)) {
+                mMusicProvider.requestLogin(extras);
+                if (cb != null) {
+                    cb.send(0, null);
+                }
+            }
+        }
+
         @Override
         public void onPlay() {
             LogHelper.d(TAG, "play");

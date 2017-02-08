@@ -35,19 +35,28 @@ package com.example.android.uamp.ui;
 
 import android.app.ActivityManager;
 import android.content.ComponentName;
+import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.RemoteException;
+import android.os.ResultReceiver;
 import android.support.annotation.NonNull;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.support.v7.media.MediaRouter;
 
+import com.antlersoft.patchyamp.AsyncRunner;
 import com.antlersoft.patchyamp.IntroTextDialog;
+import com.antlersoft.patchyamp.LoginDialog;
+import com.antlersoft.patchyamp.db.ConnectionBean;
 import com.antlersoft.patchyamp.db.PatchyDatabase;
+import com.antlersoft.patchyamp.db.SavedState;
 import com.example.android.uamp.MusicService;
 import com.antlersoft.patchyamp.R;
 import com.example.android.uamp.model.MusicProvider;
@@ -64,8 +73,13 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
 
     private MediaBrowserCompat mMediaBrowser;
     private PlaybackControlsFragment mControlsFragment;
+    private static boolean mShowedIntro;
+    Object mConnectionLock = new Object();
+    boolean mConnectionCompleted;
 
+    static boolean mDoLogin;
     PatchyDatabase mDatabase;
+    Handler mHandler;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -74,6 +88,8 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
         mDatabase = new PatchyDatabase(getApplicationContext());
 
         LogHelper.d(TAG, "Activity onCreate");
+
+        mHandler = new Handler();
 
         if (Build.VERSION.SDK_INT >= 21) {
             // Since our app icon has the same color as colorPrimary, our entry in the Recent Apps
@@ -107,8 +123,65 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
         hidePlaybackControls();
 
         mMediaBrowser.connect();
+        if (! mShowedIntro) {
+            mShowedIntro = true;
+            IntroTextDialog.showIntroTextIfNecessary(this, mDatabase);
+        } else {
+            arriveOnActivity();
+        }
+    }
 
-        IntroTextDialog.showIntroTextIfNecessary(this, mDatabase);
+    /**
+     * This method is called from onStart or from the end of intro dialog if onStart
+     * starts the intro dialog.  It waits in the background for the media controller
+     * to connect, then checks if login is required.  If login is required and there
+     * is an available connection bean, initiates login; if there is no connection
+     * bean, starts the login dialog (as if from the menu item).  If no login is required,
+     * calls onLoginInitiatedOrNotNeeded immediately.
+     */
+    public void arriveOnActivity() {
+        AsyncRunner.RunAsync(() -> {
+            synchronized (mConnectionLock) {
+                while (! mConnectionCompleted) {
+                    try {
+                        mConnectionLock.wait();
+                    } catch (InterruptedException ie) {
+
+                    }
+                }
+            }
+        }, () -> {
+            if (mDoLogin) {
+                mDoLogin = false;
+                openLoginDialog(false);
+                return;
+            }
+            MediaControllerCompat c = getSupportMediaController();
+            if (c!=null) {
+                c.sendCommand(MusicProvider.NEEDS_LOGIN_COMMAND, null, new ResultReceiver(mHandler) {
+                    @Override
+                    protected void onReceiveResult(int resultCode, Bundle resultData) {
+                        if (resultCode == 0) {
+                            onLoginInitiatedOrNotRequired();
+                        } else {
+                            // Login needed; see if we can use existing connection bean
+                            SQLiteDatabase db = mDatabase.getReadableDatabase();
+                            SavedState mostRecent = PatchyDatabase.getMostRecent(db);
+                            ConnectionBean connection = null;
+                            if (mostRecent != null) {
+                                connection = new ConnectionBean();
+                                if (connection.Gen_read(db, mostRecent.getCurrentConnectionId())) {
+                                    requestLogin(connection);
+                                    onLoginInitiatedOrNotRequired();
+                                    return;
+                                }
+                            }
+                            openLoginDialog(true);
+                        }
+                    }
+                });
+            }
+        });
     }
 
     @Override
@@ -121,11 +194,17 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
         mMediaBrowser.disconnect();
     }
 
-    protected void requestLogin() {
+    public void requestLogin(ConnectionBean toConnect) {
         MediaControllerCompat c = getSupportMediaController();
         if (c!=null) {
-            c.sendCommand(MusicProvider.LOGIN_COMMAND, null, null);
+            Bundle extras = new Bundle();
+            extras.putParcelable(ConnectionBean.GEN_TABLE_NAME, toConnect.Gen_getValues());
+            c.sendCommand(MusicProvider.LOGIN_COMMAND, extras, null);
         }
+    }
+
+    protected void openLoginDialog(boolean calledOnStartup) {
+        new LoginDialog(this, mDatabase, calledOnStartup).show();
     }
 
     @Override
@@ -133,8 +212,19 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
         return mMediaBrowser;
     }
 
-    protected void onMediaControllerConnected() {
-        // empty implementation, can be overridden by clients.
+    private void onMediaControllerConnected() {
+        synchronized (mConnectionLock) {
+            mConnectionCompleted = true;
+            mConnectionLock.notifyAll();
+        }
+    }
+
+    /**
+     * Called when the media controller has connected and been queried for login required;
+     * then login initiated if required and this is called
+     */
+    public void onLoginInitiatedOrNotRequired() {
+
     }
 
     protected void showPlaybackControls() {

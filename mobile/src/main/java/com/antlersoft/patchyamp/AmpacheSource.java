@@ -15,6 +15,7 @@
  */
 package com.antlersoft.patchyamp;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -25,8 +26,6 @@ import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import com.antlersoft.patchyamp.db.ConnectionBean;
-import com.antlersoft.patchyamp.db.PatchyDatabase;
-import com.antlersoft.patchyamp.db.SavedState;
 import com.antoniotari.reactiveampache.Exceptions.AmpacheApiException;
 import com.antoniotari.reactiveampache.api.AmpacheApi;
 import com.antoniotari.reactiveampache.models.Playlist;
@@ -51,14 +50,11 @@ public class AmpacheSource implements MusicProviderSource {
     Object mLock = new Object();
     private volatile EAmpacheState mState = EAmpacheState.INITIAL;
     private List<Song> mSongs;
-    private PatchyDatabase mDbHelper;
     ArrayList<MediaBrowserCompat.MediaItem> mItems = new ArrayList<>();
     private String mLastPlaylistId = "";
     private MusicProviderSource.ErrorCallback mErrorCallback;
 
     public AmpacheSource(Context context) {
-        mDbHelper = new PatchyDatabase(context);
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
         AmpacheApi.INSTANCE.initSession(context);
     }
 
@@ -159,14 +155,25 @@ public class AmpacheSource implements MusicProviderSource {
 
     @Override
     public void RequestLogin(Bundle extras, AllSongsCallback allSongs, ErrorCallback error) {
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
-        SavedState state = PatchyDatabase.getMostRecent(db);
-        ConnectionBean newBean = new ConnectionBean();
-        final ConnectionBean bean = state == null ? null : (newBean.Gen_read(db, state.getCurrentConnectionId()) ? newBean : null);
+        ContentValues connValues = extras.getParcelable(ConnectionBean.GEN_TABLE_NAME);
+        if (connValues == null) {
+            error.onError("No connection values in RequestLogin bundle", new IllegalArgumentException());
+            return;
+        }
+        ConnectionBean bean = new ConnectionBean();
+        bean.Gen_populate(connValues);
+        boolean mayBeLoggingIn;
+        // Set to logging in ASAP if not in login state
+        synchronized (mLock) {
+            mayBeLoggingIn = (getState() == State.INITIALIZING);
+            if (! mayBeLoggingIn) {
+                mState = EAmpacheState.LOGGING_IN;
+            }
+        }
 
         AsyncRunner.RunAsync(() -> {
                     synchronized (mLock) {
-                        while (mState == EAmpacheState.LOGGING_IN || mState == EAmpacheState.RETRIEVING) {
+                        while (mayBeLoggingIn && (mState == EAmpacheState.LOGGING_IN || mState == EAmpacheState.RETRIEVING)) {
                             patientWait(mLock);
                         }
                         mErrorCallback = error;
@@ -176,14 +183,6 @@ public class AmpacheSource implements MusicProviderSource {
                         mLock.notifyAll();
                     }
                 }, () -> {
-            if (bean == null) {
-                allSongs.onAllSongsRead(new ArrayList<MediaMetadataCompat>().iterator());
-                synchronized (mState) {
-                    mState = EAmpacheState.NO_LOGIN_INFORMATION;
-                    mLock.notifyAll();
-                }
-                return;
-            }
             AmpacheApi.INSTANCE.initUser(bean.getUrl(), bean.getLogin(), bean.getPassword())
                     .flatMap(aVoid -> AmpacheApi.INSTANCE.handshake())
                     .subscribe(handshakeResponse -> {

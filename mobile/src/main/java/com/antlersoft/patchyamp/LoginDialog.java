@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -29,6 +30,7 @@ import android.widget.Spinner;
 import com.antlersoft.patchyamp.db.ConnectionBean;
 import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.antlersoft.patchyamp.db.SavedState;
+import com.example.android.uamp.ui.BaseActivity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,11 +48,13 @@ public class LoginDialog extends Dialog {
     private EditText mTextLogin;
     private EditText mTextPassword;
     private CheckBox mKeepPassword;
+    boolean mCalledOnStartUp;
 
-    public LoginDialog(Activity context, PatchyDatabase dbHelper) {
+    public LoginDialog(Activity context, PatchyDatabase dbHelper, boolean calledOnStartUp) {
         super(context);
         setOwnerActivity(context);
         mDbHelper = dbHelper;
+        mCalledOnStartUp = calledOnStartUp;
     }
 
     /* (non-Javadoc)
@@ -60,6 +64,11 @@ public class LoginDialog extends Dialog {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login_dialog);
+        mTextNickname = (EditText)findViewById(R.id.textNickname);
+        mTextUrl = (EditText)findViewById(R.id.textURL);
+        mTextLogin = (EditText)findViewById(R.id.textUsername);
+        mTextPassword = (EditText)findViewById(R.id.textPASSWORD);
+        mKeepPassword = (CheckBox)findViewById(R.id.checkboxKeepPassword);
         mSpinnerConnection = (Spinner) findViewById(R.id.spinnerConnection);
         mSpinnerConnection.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -73,6 +82,19 @@ public class LoginDialog extends Dialog {
                 mSelected = null;
             }
         });
+        ((Button)findViewById(R.id.buttonGO)).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateSelectedFromView();
+                saveAndWriteRecent();
+                dismiss();
+                ((BaseActivity)getOwnerActivity()).requestLogin(mSelected);
+                if (mCalledOnStartUp) {
+                    ((BaseActivity)getOwnerActivity()).onLoginInitiatedOrNotRequired();
+                }
+            }
+        });
+        arriveOnPage();
     }
 
     void arriveOnPage() {
@@ -92,7 +114,7 @@ public class LoginDialog extends Dialog {
                 }
             }
         }
-        mSpinnerConnection.setAdapter(new ArrayAdapter<ConnectionBean>(this, android.R.layout.simple_spinner_item,
+        mSpinnerConnection.setAdapter(new ArrayAdapter<ConnectionBean>(getOwnerActivity(), android.R.layout.simple_spinner_item,
                 connections.toArray(new ConnectionBean[connections.size()])));
         mSpinnerConnection.setSelection(connectionIndex, false);
         mSelected = connections.get(connectionIndex);
@@ -101,14 +123,28 @@ public class LoginDialog extends Dialog {
     }
 
     private void updateViewFromSelected() {
-        mTextLogin.setText(mSelected.getLogin());
-        mTextNickname.setText(mSelected.getNickname());
-        mTextPassword.setText(mSelected.getPassword());
-        mTextUrl.setText(mSelected.getUrl());
-        mKeepPassword.setChecked(mSelected.isKeepPassword());
+        if (mSelected != null) {
+            mTextLogin.setText(mSelected.getLogin());
+            mTextNickname.setText(mSelected.getNickname());
+            mTextPassword.setText(mSelected.getPassword());
+            mTextUrl.setText(mSelected.getUrl());
+            mKeepPassword.setChecked(mSelected.isKeepPassword());
+        }
+    }
+
+    private void updateSelectedFromView() {
+        if (mSelected != null) {
+            mSelected.setLogin(mTextLogin.getText().toString());
+            mSelected.setNickname(mTextNickname.getText().toString());
+            mSelected.setPassword(mTextPassword.getText().toString());
+            mSelected.setUrl(mTextUrl.getText().toString());
+            mSelected.setKeepPassword(mKeepPassword.isChecked());
+        }
     }
     private void saveAndWriteRecent()
     {
+        if (mSelected == null)
+            return;
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         db.beginTransaction();
         try

@@ -189,7 +189,7 @@ public class MusicPlayerActivity extends BaseActivity
     }
 
     @Override
-    protected void onMediaControllerConnected() {
+    public void onLoginInitiatedOrNotRequired() {
         if (mVoiceSearchParams != null) {
             // If there is a bootstrap parameter to start from a search query, we
             // send it to the media session and set it to null, so it won't play again

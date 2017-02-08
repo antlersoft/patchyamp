@@ -15,7 +15,6 @@
  */
 package com.antlersoft.patchyamp;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -32,6 +31,7 @@ import android.widget.TextView;
 
 import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.antlersoft.patchyamp.db.SavedState;
+import com.example.android.uamp.ui.BaseActivity;
 
 /**
  * @author Michael A. MacDonald
@@ -41,12 +41,13 @@ public class IntroTextDialog extends Dialog {
 
 	private PackageInfo packageInfo;
 	private PatchyDatabase database;
+    BaseActivity mContext;
 	
 	static IntroTextDialog dialog;
 	
-	public static void showIntroTextIfNecessary(Activity context, PatchyDatabase database)
+	public static void showIntroTextIfNecessary(BaseActivity context, PatchyDatabase database)
 	{
-		PackageInfo pi;
+ 		PackageInfo pi;
 		try
 		{
 			pi = context.getPackageManager().getPackageInfo("com.antlersoft.patchyamp", 0);
@@ -69,8 +70,9 @@ public class IntroTextDialog extends Dialog {
 	/**
 	 * @param context -- Containing dialog
 	 */
-	private IntroTextDialog(Activity context, PackageInfo pi, PatchyDatabase database) {
+	private IntroTextDialog(BaseActivity context, PackageInfo pi, PatchyDatabase database) {
 		super(context);
+        mContext = context;
 		setOwnerActivity(context);
 		packageInfo = pi;
 		this.database = database;
@@ -102,6 +104,7 @@ public class IntroTextDialog extends Dialog {
 			@Override
 			public void onClick(View v) {
 				dismiss();
+                mContext.arriveOnActivity();
 			}
 			
 		});
@@ -112,7 +115,7 @@ public class IntroTextDialog extends Dialog {
 			 */
 			@Override
 			public void onClick(View v) {
-				dontShowAgain();
+				dontShowAgain();mContext.arriveOnActivity();
 			}
 			
 		});

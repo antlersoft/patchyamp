@@ -51,6 +51,7 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.antlersoft.patchyamp.R;
+import com.example.android.uamp.model.MusicProvider;
 import com.example.android.uamp.utils.LogHelper;
 import com.google.android.gms.cast.framework.CastButtonFactory;
 import com.google.android.gms.cast.framework.CastContext;
@@ -114,8 +115,9 @@ public abstract class ActionBarCastActivity extends AppCompatActivity {
                     case R.id.navigation_allmusic:
                         activityClass = MusicPlayerActivity.class;
                         break;
-                    case R.id.navigation_playlists:
-                        activityClass = PlaceholderActivity.class;
+                    case R.id.navigation_login:
+                        activityClass = MusicPlayerActivity.class;
+                        BaseActivity.mDoLogin = true;
                         break;
                 }
                 if (activityClass != null) {
@@ -296,8 +298,6 @@ public abstract class ActionBarCastActivity extends AppCompatActivity {
                 });
         if (MusicPlayerActivity.class.isAssignableFrom(getClass())) {
             navigationView.setCheckedItem(R.id.navigation_allmusic);
-        } else if (PlaceholderActivity.class.isAssignableFrom(getClass())) {
-            navigationView.setCheckedItem(R.id.navigation_playlists);
         }
     }
 

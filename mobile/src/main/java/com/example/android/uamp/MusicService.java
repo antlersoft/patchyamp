@@ -51,6 +51,7 @@ import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.media.MediaRouter;
+import android.util.Log;
 
 import com.antlersoft.patchyamp.AmpacheSource;
 import com.antlersoft.patchyamp.R;
@@ -181,12 +182,19 @@ public class MusicService extends MediaBrowserServiceCompat implements
         super.onCreate();
         LogHelper.d(TAG, "onCreate");
 
-        mMusicProvider = new MusicProvider(new AmpacheSource(getApplicationContext()));
-
-        // To make the app more responsive, fetch and cache catalog information now.
-        // This can help improve the response time in the method
-        // {@link #onLoadChildren(String, Result<List<MediaItem>>) onLoadChildren()}.
-        mMusicProvider.retrieveMediaAsync(null /* Callback */);
+        mMusicProvider = new MusicProvider(new AmpacheSource(getApplicationContext()), (message, throwable) -> {
+            if (mSession == null) {
+                LogHelper.e(TAG, "Can't send to session this message: "+message);
+            }
+            StringBuilder builder = new StringBuilder(message);
+            builder.append('\n');
+            builder.append(throwable.getLocalizedMessage());
+            builder.append('\n');
+            builder.append(Log.getStackTraceString(throwable));
+            Bundle extras = new Bundle();
+            extras.putCharSequence(MusicProvider.ERROR_REPORT_EVENT_MESSAGE, builder);
+            mSession.sendSessionEvent(MusicProvider.ERROR_REPORT_EVENT, extras);
+        });
 
         mPackageValidator = new PackageValidator(this);
 

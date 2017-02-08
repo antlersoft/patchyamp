@@ -4,6 +4,7 @@
 	android:layout_height="fill_parent"
 	android:padding="10dip"
 	android:orientation="vertical"
+    android:minWidth="300dp"
 		>
 	<LinearLayout
 		android:layout_width="fill_parent"
@@ -60,7 +61,7 @@
 				</TableRow>
 				<TableRow>
 					<TextView android:text="@string/url_caption" android:hint="http://192.168.1.1/ampache" android:paddingRight="10dip" android:gravity="right|center_vertical" android:textAppearance="?android:attr/textAppearanceMedium" />
-					<EditText android:id="@+id/textIP" android:layout_width="fill_parent" android:layout_height="wrap_content" android:singleLine="true" android:layout_weight="1" />
+					<EditText android:id="@+id/textURL" android:layout_width="fill_parent" android:layout_height="wrap_content" android:singleLine="true" android:layout_weight="1" />
 				</TableRow>
 				<TableRow>
 					<TextView android:text="@string/username_caption" android:paddingRight="10dip" android:gravity="right|center_vertical" android:textAppearance="?android:attr/textAppearanceMedium" />

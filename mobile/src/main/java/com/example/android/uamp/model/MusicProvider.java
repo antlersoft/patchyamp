@@ -70,6 +70,9 @@ import static com.example.android.uamp.utils.MediaIDHelper.createMediaID;
  */
 public class MusicProvider {
     public static final String LOGIN_COMMAND = "LOGIN_COMMAND";
+    public static final String NEEDS_LOGIN_COMMAND = "NEEDS_LOGIN_COMMAND";
+    public static final String ERROR_REPORT_EVENT = "ERROR_REPORT_EVENT";
+    public static final String ERROR_REPORT_EVENT_MESSAGE = "ERROR_REPORT_EVENT_MESSAGE";
 
     private static final String TAG = LogHelper.makeLogTag(MusicProvider.class);
 
@@ -129,6 +132,10 @@ public class MusicProvider {
         }
         Collections.shuffle(shuffled);
         return shuffled;
+    }
+
+    public MusicProviderSource.State getState() {
+        return mSource.getState();
     }
 
     /**
