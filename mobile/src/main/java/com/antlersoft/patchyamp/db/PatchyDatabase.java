@@ -31,8 +31,20 @@ public class PatchyDatabase extends SQLiteOpenHelper {
 
     public final static String TAG = PatchyDatabase.class.toString();
 
-    public PatchyDatabase(Context context) {
+    private static Object mInstanceLock = new Object();
+    private static PatchyDatabase mInstance;
+
+    private PatchyDatabase(Context context) {
         super(context, "PatchyDatabase", null, DBV_0_1_X);
+    }
+
+    public static PatchyDatabase getInstance(Context context) {
+        synchronized (mInstanceLock) {
+            if (mInstance == null) {
+                mInstance = new PatchyDatabase(context);
+            }
+            return mInstance;
+        }
     }
 
     @Override

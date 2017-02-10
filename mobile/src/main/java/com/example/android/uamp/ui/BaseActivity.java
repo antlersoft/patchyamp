@@ -85,7 +85,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mDatabase = new PatchyDatabase(getApplicationContext());
+        mDatabase = PatchyDatabase.getInstance(getApplicationContext());
 
         LogHelper.d(TAG, "Activity onCreate");
 
