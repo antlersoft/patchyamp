@@ -84,9 +84,20 @@ public class MusicProvider {
 
     private final Set<String> mFavoriteTracks;
 
-    private final MusicProviderSource.ErrorCallback mErrorCallback;
+    private MusicProviderSource.ErrorCallback mErrorCallback;
 
-    public MusicProvider(MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
+    private static MusicProvider mInstance;
+
+    public static MusicProvider getInstance(MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
+        if (mInstance == null) {
+            mInstance = new MusicProvider(source, errorCallback);
+        } else {
+            mInstance.mErrorCallback = errorCallback;
+        }
+        return mInstance;
+    }
+
+    private MusicProvider(MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
         mSource = source;
         mMusicListByGenre = new ConcurrentHashMap<>();
         mMusicListById = new ConcurrentHashMap<>();

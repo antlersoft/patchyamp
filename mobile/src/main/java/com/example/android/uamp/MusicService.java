@@ -182,7 +182,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
         super.onCreate();
         LogHelper.d(TAG, "onCreate");
 
-        mMusicProvider = new MusicProvider(new AmpacheSource(getApplicationContext()), (message, throwable) -> {
+        mMusicProvider = MusicProvider.getInstance(new AmpacheSource(getApplicationContext()), (message, throwable) -> {
             if (mSession == null) {
                 LogHelper.e(TAG, "Can't send to session this message: "+message);
             }
