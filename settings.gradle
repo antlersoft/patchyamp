@@ -1,1 +1,1 @@
-include ':mobile', ':reactive-ampache'
+include ':mobile', ':reactive-ampache', ':logcat'

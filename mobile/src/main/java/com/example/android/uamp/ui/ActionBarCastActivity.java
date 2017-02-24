@@ -59,6 +59,8 @@ import com.google.android.gms.cast.framework.CastState;
 import com.google.android.gms.cast.framework.CastStateListener;
 import com.google.android.gms.cast.framework.IntroductoryOverlay;
 
+import io.leftshift.logcat.LogcatActivity;
+
 /**
  * Abstract activity with toolbar, navigation drawer and cast support. Needs to be extended by
  * any activity that wants to be shown as a top level activity.
@@ -119,6 +121,8 @@ public abstract class ActionBarCastActivity extends AppCompatActivity {
                         activityClass = MusicPlayerActivity.class;
                         BaseActivity.mDoLogin = true;
                         break;
+                    case R.id.navigation_logcat:
+                        activityClass = LogcatActivity.class;
                 }
                 if (activityClass != null) {
                     startActivity(new Intent(ActionBarCastActivity.this, activityClass), extras);
