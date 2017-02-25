@@ -97,6 +97,9 @@ public final class AlbumArtCache {
                 try {
                     Bitmap bitmap = BitmapHelper.fetchAndRescaleBitmap(artUrl,
                         MAX_ART_WIDTH, MAX_ART_HEIGHT);
+                    if (bitmap == null) {
+                        return null;
+                    }
                     Bitmap icon = BitmapHelper.scaleBitmap(bitmap,
                         MAX_ART_WIDTH_ICON, MAX_ART_HEIGHT_ICON);
                     bitmaps = new Bitmap[] {bitmap, icon};

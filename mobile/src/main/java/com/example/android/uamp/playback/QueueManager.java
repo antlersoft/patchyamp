@@ -122,6 +122,11 @@ public class QueueManager {
             index = 0;
         } else {
             // skip forwards when in last song will cycle back to start of the queue
+            if (mPlayingQueue.size() == 0) {
+                LogHelper.e(TAG, "Cannot skip to position in empty queue ", amount,
+                        ". Current=", mCurrentIndex, " queue length=", mPlayingQueue.size());
+                return false;
+            }
             index %= mPlayingQueue.size();
         }
         if (!QueueHelper.isIndexPlayable(index, mPlayingQueue)) {
