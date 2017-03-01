@@ -17,12 +17,7 @@ package com.antlersoft.patchyamp;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.MediaBrowserServiceCompat;
-import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import com.antlersoft.patchyamp.db.ConnectionBean;
@@ -31,6 +26,7 @@ import com.antoniotari.reactiveampache.api.AmpacheApi;
 import com.antoniotari.reactiveampache.models.Playlist;
 import com.antoniotari.reactiveampache.models.Song;
 import com.antoniotari.reactiveampache.models.Tag;
+import com.antoniotari.reactiveampache.models.TagEntity;
 import com.example.android.uamp.model.MusicProviderSource;
 import com.example.android.uamp.utils.LogHelper;
 
@@ -49,17 +45,37 @@ public class AmpacheSource implements MusicProviderSource {
     static final String TAG = LogHelper.makeLogTag(AmpacheSource.class);
     Object mLock = new Object();
     private volatile EAmpacheState mState = EAmpacheState.INITIAL;
-    private List<Song> mSongs;
-    ArrayList<MediaBrowserCompat.MediaItem> mItems = new ArrayList<>();
-    private String mLastPlaylistId = "";
     private MusicProviderSource.ErrorCallback mErrorCallback;
 
     public AmpacheSource(Context context) {
         AmpacheApi.INSTANCE.initSession(context);
     }
 
-    private Iterator<MediaMetadataCompat> songIterator() {
-        final Iterator<Song> s = mSongs.iterator();
+    private MediaMetadataCompat buildMetadataFromSong(Song song) {
+        StringBuilder sb = new StringBuilder();
+        if (song.getTag() != null) {
+            for (Tag t : song.getTag()) {
+                if (sb.length() > 0)
+                    sb.append(' ');
+                sb.append(t.getTag());
+            }
+        }
+        return new MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, song.getId())
+                .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, song.getUrl())
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.getAlbum().getName())
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.getArtist().getName())
+                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, song.getTime()*1000L)
+                .putString(MediaMetadataCompat.METADATA_KEY_GENRE, sb.toString())
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, song.getArt())
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.getTitle())
+                .putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, song.getTrack())
+                .putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, song.getTrack()+1)
+                .build();
+    }
+
+    private Iterator<MediaMetadataCompat> songIterator(Iterable<Song> songs) {
+        final Iterator<Song> s = songs.iterator();
         return new Iterator<MediaMetadataCompat>() {
             @Override
             public boolean hasNext() {
@@ -68,28 +84,7 @@ public class AmpacheSource implements MusicProviderSource {
 
             @Override
             public MediaMetadataCompat next() {
-                Song song = s.next();
-                StringBuilder sb = new StringBuilder();
-                if (song.getTag() != null) {
-                    for (Tag t : song.getTag()) {
-                        if (sb.length() > 0)
-                            sb.append(' ');
-                        sb.append(t.getTag());
-                    }
-                }
-                return new MediaMetadataCompat.Builder()
-                        .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, song.getId())
-                        .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, song.getUrl())
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, song.getAlbum().getName())
-                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, song.getArtist().getName())
-                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, song.getTime()*1000L)
-                        .putString(MediaMetadataCompat.METADATA_KEY_GENRE, sb.toString())
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, song.getArt())
-                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.getTitle())
-                        .putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, song.getTrack())
-                        .putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, song.getTrack()+1)
-                        .build();
-
+                return buildMetadataFromSong(s.next());
             }
 
             @Override
@@ -135,27 +130,36 @@ public class AmpacheSource implements MusicProviderSource {
         return State.NON_INITIALIZED;
     }
 
-    private void retrieveAllSongs(AllSongsCallback allSongs) {
-        AmpacheApi.INSTANCE.getSongs().subscribe(songs -> {
-            mSongs = songs;
-            allSongs.onAllSongsRead(songIterator());
-            synchronized (mLock) {
-                mState = EAmpacheState.READY;
-                mLock.notifyAll();
+    @Override
+    public void getDefaultSongs(MediaFetchResult result) {
+        final ArrayList<String> complain = new ArrayList<String>();
+        AsyncRunner.RunAsync(() -> {
+            waitForInitialization();
+            if (mState != EAmpacheState.READY) {
+                result.setResult("All songs shuffled", new ArrayList<MediaMetadataCompat>().iterator());
+                complain.add("Not ready");
             }
-        }, throwable -> {
-           allSongs.onAllSongsRead(new ArrayList<MediaMetadataCompat>().iterator());
-            synchronized (mLock) {
-                mState = EAmpacheState.FAILURE;
-                mLock.notifyAll();
+            AmpacheApi.INSTANCE.getSongs().subscribe(songs -> {
+                result.setResult("All songs shuffled", songIterator(songs));
+            }, throwable -> {
+                result.setResult("All songs shuffled", new ArrayList<MediaMetadataCompat>().iterator());
+                synchronized (mLock) {
+                    mState = EAmpacheState.FAILURE;
+                    mLock.notifyAll();
+                }
+                onError(throwable);
+            });
+        }, () -> {
+            if (! complain.isEmpty()) {
+                mErrorCallback.onError(complain.get(0), null);
             }
-            onError(throwable);
         });
     }
 
     @Override
-    public void RequestLogin(Bundle extras, AllSongsCallback allSongs, ErrorCallback error) {
+    public void RequestLogin(Bundle extras, ErrorCallback error) {
         ContentValues connValues = extras.getParcelable(ConnectionBean.GEN_TABLE_NAME);
+        mErrorCallback = error;
         if (connValues == null) {
             error.onError("No connection values in RequestLogin bundle", new IllegalArgumentException());
             return;
@@ -178,8 +182,6 @@ public class AmpacheSource implements MusicProviderSource {
                         }
                         mErrorCallback = error;
                         mState = EAmpacheState.LOGGING_IN;
-                        mSongs = null;
-                        mLastPlaylistId = "";
                         mLock.notifyAll();
                     }
                 }, () -> {
@@ -188,10 +190,9 @@ public class AmpacheSource implements MusicProviderSource {
                     .subscribe(handshakeResponse -> {
                         LogHelper.i(TAG, "Expiration: " + handshakeResponse.getSession_expire());
                         synchronized (mLock) {
-                            mState = EAmpacheState.RETRIEVING;
+                            mState = EAmpacheState.READY;
                             mLock.notifyAll();
                         }
-                        retrieveAllSongs(allSongs);
                     }, throwable -> {
                         synchronized (mLock) {
                             mState = EAmpacheState.FAILURE;
@@ -204,92 +205,137 @@ public class AmpacheSource implements MusicProviderSource {
     }
 
     @Override
-    public void GetPlaylists(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
-        final ArrayList<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
+    public void GetPlaylists(MediaFetchResult result) {
+        final ArrayList<MediaMetadataCompat> items = new ArrayList<>();
 
         AsyncRunner.RunAsync(this::waitForInitialization, () -> {
             if (mState != EAmpacheState.READY) {
-                result.sendResult(items);
+                result.setResult("Playlists", items.iterator());
                 return;
             }
 
             AmpacheApi.INSTANCE.getPlaylists().subscribe(playlists -> {
                         for (Playlist pl : playlists) {
-                            MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
-                                    .setMediaId(PLAYLIST_PREFIX + pl.getId())
-                                    .setTitle(pl.getName())
-                                    .setSubtitle(pl.getType())
-                                    .setIconUri(Uri.parse("android.resource://" +
-                                            "com.antlersoft.patchyamp/drawable/ic_by_genre"))
+                            MediaMetadataCompat description = new MediaMetadataCompat.Builder()
+                                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, pl.getId())
+                                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, pl.getName())
+                                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, pl.getType())
+                                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, "android.resource://" +
+                                            "com.antlersoft.patchyamp/drawable/ic_by_genre")
                                     .build();
-                            items.add(new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE));
+                            items.add(description);
                         }
-                        result.sendResult(items);
+                        result.setResult("Playlists", items.iterator());
                     },
                     throwable -> {
                         onError(throwable);
-                        result.sendResult(items);
+                        result.setResult("Playlists", items.iterator());
                     });
         });
     }
 
-    private void resultPlaylistSongs(final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
-        List<MediaBrowserCompat.MediaItem> items = new ArrayList<>(mSongs.size());
-        for (Song s : mSongs) {
-            MediaMetadataCompat meta = toGet.getMetadata(s.getId());
-            if (meta == null) {
-                LogHelper.e(TAG, "No metadata found for song: "+s.toString());
-            } else {
-                items.add(toItem.getItem(meta));
-            }
-        }
-        result.sendResult(items);
-        if (toSetQueue != null) {
-            toSetQueue.setCurrentQueueFromBrowse("Playlist", new Iterable<MediaMetadataCompat>() {
-                public Iterator<MediaMetadataCompat> iterator() {
-                    return new Iterator<MediaMetadataCompat>() {
-                        private Iterator<Song> mSi = mSongs.iterator();
-
-                        @Override
-                        public boolean hasNext() {
-                            return mSi.hasNext();
-                        }
-
-                        @Override
-                        public MediaMetadataCompat next() {
-                            return toGet.getMetadata(mSi.next().getId());
-                        }
-
-                        @Override
-                        public void remove() {
-
-                        }
-                    };
-                }
-            });
-        }
-    }
-
     @Override
-    public void GetPlaylistSongs(final String playListId, final MediaMetadataCompatFromId toGet, final ItemFromMetadata toItem, final SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
-        if (mLastPlaylistId.equals(playListId)) {
-            resultPlaylistSongs(toGet, toItem, toSetQueue, result);
-            return;
-        }
+    public void GetGenres(MediaFetchResult result) {
+        final ArrayList<MediaMetadataCompat> items = new ArrayList<>();
+
         AsyncRunner.RunAsync(this::waitForInitialization, () -> {
             if (mState != EAmpacheState.READY) {
-                result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>(0));
+                result.setResult("Genres", items.iterator());
                 return;
             }
-            AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe(songs -> {
-                        mSongs = songs;
-                        mLastPlaylistId = playListId;
-                        resultPlaylistSongs(toGet, toItem, toSetQueue, result);
+
+            AmpacheApi.INSTANCE.getTags().subscribe(playlists -> {
+                        for (TagEntity pl : playlists) {
+                            MediaMetadataCompat description = new MediaMetadataCompat.Builder()
+                                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, pl.getId())
+                                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, pl.getName())
+                                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, Integer.toString(pl.getSongs()))
+                                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, "android.resource://" +
+                                            "com.antlersoft.patchyamp/drawable/ic_by_genre")
+                                    .build();
+                            items.add(description);
+                        }
+                        result.setResult("Genres", items.iterator());
                     },
                     throwable -> {
                         onError(throwable);
-                        result.sendResult(new ArrayList<MediaBrowserCompat.MediaItem>(0));
+                        result.setResult("Genres", items.iterator());
                     });
+        });
+
+    }
+
+    @Override
+    public void GetPlaylistSongs(String playListId, MediaFetchResult toSetQueue) {
+        final ArrayList<MediaMetadataCompat> items = new ArrayList<>();
+
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                toSetQueue.setResult("Playlist", items.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.getPlaylistSongs(playListId).subscribe((songs) -> {
+                toSetQueue.setResult("Playlist", songIterator(songs));
+            }, (throwable) -> {
+                mState = EAmpacheState.FAILURE;
+                toSetQueue.setResult("Playlist", items.iterator());
+                onError(throwable);
+            });
+        });
+    }
+
+    @Override
+    public void GetGenreSongs(String genreId, MediaFetchResult toSetQueue) {
+        final ArrayList<MediaMetadataCompat> items = new ArrayList<>();
+
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                toSetQueue.setResult("Genre", items.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.getTagSongs(genreId).subscribe((songs) -> {
+                toSetQueue.setResult("Genre", songIterator(songs));
+            }, (throwable) -> {
+                mState = EAmpacheState.FAILURE;
+                toSetQueue.setResult("Genre", items.iterator());
+                onError(throwable);
+            });
+        });
+    }
+
+    @Override
+    public void GetSearchSongs(String anyMatch, MediaFetchResult toSetQueue) {
+
+    }
+
+    @Override
+    public void GetArtists(MediaFetchResult result) {
+
+    }
+
+    @Override
+    public void GetArtistSongs(String id, MediaFetchResult result) {
+
+    }
+
+    @Override
+    public void GetAlbums(MediaFetchResult result) {
+
+    }
+
+    @Override
+    public void GetAlbumSongs(String id, MediaFetchResult result) {
+
+    }
+
+    @Override
+    public void GetSong(String id, ItemResult result) {
+        AmpacheApi.INSTANCE.getSong(id).subscribe((Song song)->{
+            result.setResult(buildMetadataFromSong(song));
+        }, (throwable)->{
+            mState = EAmpacheState.FAILURE;
+            onError(throwable);
+            result.setResult(null);
         });
     }
 
@@ -307,4 +353,5 @@ public class AmpacheSource implements MusicProviderSource {
         if (mErrorCallback != null) {
             mErrorCallback.onError(message, throwable);
         }
-    }}
+    }
+}

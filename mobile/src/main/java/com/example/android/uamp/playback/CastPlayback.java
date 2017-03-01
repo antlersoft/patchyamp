@@ -198,18 +198,23 @@ public class CastPlayback implements Playback {
 
     private void loadMedia(String mediaId, boolean autoPlay) throws JSONException {
         String musicId = MediaIDHelper.extractMusicIDFromMediaID(mediaId);
-        MediaMetadataCompat track = mMusicProvider.getMusic(musicId);
-        if (track == null) {
-            throw new IllegalArgumentException("Invalid mediaId " + mediaId);
-        }
-        if (!TextUtils.equals(mediaId, mCurrentMediaId)) {
-            mCurrentMediaId = mediaId;
-            mCurrentPosition = 0;
-        }
-        JSONObject customData = new JSONObject();
-        customData.put(ITEM_ID, mediaId);
-        MediaInfo media = toCastMediaMetadata(track, customData);
-        mRemoteMediaClient.load(media, autoPlay, mCurrentPosition, customData);
+        mMusicProvider.getMusic(musicId, (track)-> {
+            if (track == null) {
+                throw new IllegalArgumentException("Invalid mediaId " + mediaId);
+            }
+            if (!TextUtils.equals(mediaId, mCurrentMediaId)) {
+                mCurrentMediaId = mediaId;
+                mCurrentPosition = 0;
+            }
+            JSONObject customData = new JSONObject();
+            try {
+                customData.put(ITEM_ID, mediaId);
+            } catch (Exception e) {
+                LogHelper.e(TAG, e, "Error creating json for item");
+            }
+            MediaInfo media = toCastMediaMetadata(track, customData);
+            mRemoteMediaClient.load(media, autoPlay, mCurrentPosition, customData);
+        });
     }
 
     /**

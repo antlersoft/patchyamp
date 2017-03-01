@@ -177,6 +177,7 @@ public class PlaybackManager implements Playback.Callback {
         if (mediaId == null) {
             return;
         }
+        /*
         String musicId = MediaIDHelper.extractMusicIDFromMediaID(mediaId);
         int favoriteIcon = mMusicProvider.isFavorite(musicId) ?
                 R.drawable.ic_star_on : R.drawable.ic_star_off;
@@ -188,6 +189,7 @@ public class PlaybackManager implements Playback.Callback {
                 CUSTOM_ACTION_THUMBS_UP, mResources.getString(R.string.favorite), favoriteIcon)
                 .setExtras(customActionExtras)
                 .build());
+                */
     }
 
     private long getAvailableActions() {
@@ -234,7 +236,7 @@ public class PlaybackManager implements Playback.Callback {
     @Override
     public void setCurrentMediaId(String mediaId) {
         LogHelper.d(TAG, "setCurrentMediaId", mediaId);
-        mQueueManager.setQueueFromMusic(mediaId);
+        mQueueManager.setQueueFromMusic(mediaId, () -> {});
     }
 
 
@@ -300,9 +302,8 @@ public class PlaybackManager implements Playback.Callback {
         public void onPlay() {
             LogHelper.d(TAG, "play");
             if (mQueueManager.getCurrentMusic() == null) {
-                mQueueManager.setRandomQueue();
+                mQueueManager.setRandomQueue(() -> {handlePlayRequest();});
             }
-            handlePlayRequest();
         }
 
         @Override
@@ -321,8 +322,7 @@ public class PlaybackManager implements Playback.Callback {
         @Override
         public void onPlayFromMediaId(String mediaId, Bundle extras) {
             LogHelper.d(TAG, "playFromMediaId mediaId:", mediaId, "  extras=", extras);
-            mQueueManager.setQueueFromMusic(mediaId);
-            handlePlayRequest();
+            mQueueManager.setQueueFromMusic(mediaId, () -> {handlePlayRequest();});
         }
 
         @Override
@@ -367,7 +367,7 @@ public class PlaybackManager implements Playback.Callback {
                     String mediaId = currentMusic.getDescription().getMediaId();
                     if (mediaId != null) {
                         String musicId = MediaIDHelper.extractMusicIDFromMediaID(mediaId);
-                        mMusicProvider.setFavorite(musicId, !mMusicProvider.isFavorite(musicId));
+                        //mMusicProvider.setFavorite(musicId, !mMusicProvider.isFavorite(musicId));
                     }
                 }
                 // playback state needs to be updated because the "Favorite" icon on the
@@ -396,13 +396,14 @@ public class PlaybackManager implements Playback.Callback {
             LogHelper.d(TAG, "playFromSearch  query=", query, " extras=", extras);
 
             mPlayback.setState(PlaybackStateCompat.STATE_CONNECTING);
-            boolean successSearch = mQueueManager.setQueueFromSearch(query, extras);
-            if (successSearch) {
-                handlePlayRequest();
-                mQueueManager.updateMetadata();
-            } else {
-                updatePlaybackState("Could not find music");
-            }
+            mQueueManager.setQueueFromSearch(query, extras, (queue) -> {
+                if (queue != null && queue.size()>0) {
+                    handlePlayRequest();
+                    mQueueManager.updateMetadata();
+                } else {
+                    updatePlaybackState("Could not find music");
+                }
+            });
         }
     }
 

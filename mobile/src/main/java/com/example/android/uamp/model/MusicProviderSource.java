@@ -35,8 +35,6 @@
 package com.example.android.uamp.model;
 
 import android.os.Bundle;
-import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import java.util.Iterator;
@@ -44,7 +42,7 @@ import java.util.List;
 
 public interface MusicProviderSource {
     String CUSTOM_METADATA_TRACK_SOURCE = "__SOURCE__";
-    String PLAYLIST_PREFIX = "__PLAYLIST_";
+
     enum State {
         NON_INITIALIZED, INITIALIZING, INITIALIZED
     }
@@ -53,22 +51,31 @@ public interface MusicProviderSource {
         void onError(String message, Throwable throwable);
     }
 
-    interface AllSongsCallback {
-        void onAllSongsRead(Iterator<MediaMetadataCompat> allSongs);
+    interface MediaFetchResult {
+        void setResult(String title, Iterator<MediaMetadataCompat> items);
     }
 
-    interface MediaMetadataCompatFromId {
-        MediaMetadataCompat getMetadata(String id);
-    }
-    interface ItemFromMetadata {
-        MediaBrowserCompat.MediaItem getItem(MediaMetadataCompat meta);
-    }
-    interface SetQueueDirectly {
-        void setCurrentQueueFromBrowse(String title, Iterable<MediaMetadataCompat> items);
+    interface ItemResult {
+        void setResult(MediaMetadataCompat item);
     }
 
     State getState();
-    void RequestLogin(Bundle extras, AllSongsCallback allSongs, ErrorCallback error);
-    void GetPlaylists(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
-    void GetPlaylistSongs(String playListId, MediaMetadataCompatFromId toGet, ItemFromMetadata toItem, SetQueueDirectly toSetQueue, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result);
+    void RequestLogin(Bundle extras, ErrorCallback error);
+
+    /**
+     * Typically returns all songs, shuffled
+     * @param result
+     */
+    void getDefaultSongs(MediaFetchResult result);
+    void GetPlaylists(MediaFetchResult result);
+    void GetPlaylistSongs(String playListId, MediaFetchResult toSetQueue);
+    void GetGenres(MediaFetchResult result);
+    void GetGenreSongs(String genreId, MediaFetchResult toSetQueue);
+    void GetSearchSongs(String anyMatch, MediaFetchResult toSetQueue);
+    void GetArtists(MediaFetchResult result);
+    void GetArtistSongs(String id, MediaFetchResult result);
+    void GetAlbums(MediaFetchResult result);
+    void GetAlbumSongs(String id, MediaFetchResult result);
+    void GetSong(String id, ItemResult result);
+
 }

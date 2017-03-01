@@ -44,55 +44,66 @@ import android.text.TextUtils;
 
 import com.example.android.uamp.VoiceSearchParams;
 import com.example.android.uamp.model.MusicProvider;
+import com.example.android.uamp.model.MusicProviderSource;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_GENRE;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_SEARCH;
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_PLAYLISTS;
 
 /**
  * Utility class to help on queue related tasks.
  */
 public class QueueHelper {
+    public interface QueryResult {
+        void SetResult(List<MediaSessionCompat.QueueItem> queueItems);
+    }
+
+    private static MusicProviderSource.MediaFetchResult FetchToQueryResult(QueryResult qr, String... categories) {
+        return (title, items) -> {
+            qr.SetResult(convertToQueue(items, categories));
+        };
+    }
 
     private static final String TAG = LogHelper.makeLogTag(QueueHelper.class);
 
     private static final int RANDOM_QUEUE_SIZE = 10;
 
-    public static List<MediaSessionCompat.QueueItem> getPlayingQueue(String mediaId,
-            MusicProvider musicProvider) {
+    public static void getPlayingQueue(String mediaId,
+            MusicProvider musicProvider, QueryResult result) {
 
         // extract the browsing hierarchy from the media ID:
         String[] hierarchy = MediaIDHelper.getHierarchy(mediaId);
 
         if (hierarchy.length != 2) {
             LogHelper.e(TAG, "Could not build a playing queue for this mediaId: ", mediaId);
-            return null;
+            return;
         }
 
         String categoryType = hierarchy[0];
         String categoryValue = hierarchy[1];
         LogHelper.d(TAG, "Creating playing queue for ", categoryType, ",  ", categoryValue);
 
-        Iterable<MediaMetadataCompat> tracks = null;
         // This sample only supports genre and by_search category types.
         if (categoryType.equals(MEDIA_ID_MUSICS_BY_GENRE)) {
-            tracks = musicProvider.getMusicsByGenre(categoryValue);
+            musicProvider.getMusicByGenre(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
+            return;
         } else if (categoryType.equals(MEDIA_ID_MUSICS_BY_SEARCH)) {
-            tracks = musicProvider.searchMusicBySongTitle(categoryValue);
+            musicProvider.searchMusicBySongTitle(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
+            return;
+        } else if (categoryType.equals(MEDIA_ID_PLAYLISTS)) {
+            musicProvider.getMusicByPlaylist(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
+            return;
         }
 
-        if (tracks == null) {
-            LogHelper.e(TAG, "Unrecognized category type: ", categoryType, " for media ", mediaId);
-            return null;
-        }
-
-        return convertToQueue(tracks, hierarchy[0], hierarchy[1]);
+        LogHelper.e(TAG, "Unrecognized category type: ", categoryType, " for media ", mediaId);
     }
 
-    public static List<MediaSessionCompat.QueueItem> getPlayingQueueFromSearch(String query,
-            Bundle queryParams, MusicProvider musicProvider) {
+    public static void getPlayingQueueFromSearch(String query,
+            Bundle queryParams, MusicProvider musicProvider, QueryResult result) {
 
         LogHelper.d(TAG, "Creating playing queue for musics from search: ", query,
             " params=", queryParams);
@@ -104,18 +115,22 @@ public class QueueHelper {
         if (params.isAny) {
             // If isAny is true, we will play anything. This is app-dependent, and can be,
             // for example, favorite playlists, "I'm feeling lucky", most recent, etc.
-            return getRandomQueue(musicProvider);
+            getRandomQueue(musicProvider, result);
+            return;
         }
 
-        Iterable<MediaMetadataCompat> result = null;
         if (params.isAlbumFocus) {
-            result = musicProvider.searchMusicByAlbum(params.album);
+            musicProvider.searchMusicByAlbum(params.album, FetchToQueryResult(result, MEDIA_ID_MUSICS_BY_SEARCH, query));
+            return;
         } else if (params.isGenreFocus) {
-            result = musicProvider.getMusicsByGenre(params.genre);
+            musicProvider.getMusicByGenre(params.genre, FetchToQueryResult(result, MEDIA_ID_MUSICS_BY_GENRE, params.genre));
+            return;
         } else if (params.isArtistFocus) {
-            result = musicProvider.searchMusicByArtist(params.artist);
+            musicProvider.searchMusicByArtist(params.artist, FetchToQueryResult(result, MEDIA_ID_MUSICS_BY_SEARCH, query));
+            return;
         } else if (params.isSongFocus) {
-            result = musicProvider.searchMusicBySongTitle(params.song);
+            musicProvider.searchMusicBySongTitle(params.song, FetchToQueryResult(result, MEDIA_ID_MUSICS_BY_SEARCH, query));
+            return;
         }
 
         // If there was no results using media focus parameter, we do an unstructured query.
@@ -123,15 +138,12 @@ public class QueueHelper {
         // to Google, for example, but is not. For example, a user searching for Madonna on
         // a PodCast application wouldn't get results if we only looked at the
         // Artist (podcast author). Then, we can instead do an unstructured search.
-        if (params.isUnstructured || result == null || !result.iterator().hasNext()) {
+        if (params.isUnstructured) {
             // To keep it simple for this example, we do unstructured searches on the
             // song title only. A real world application could search on other fields as well.
-            result = musicProvider.searchMusicBySongTitle(query);
+            musicProvider.searchMusicBySongTitle(query, FetchToQueryResult(result, MEDIA_ID_MUSICS_BY_SEARCH, query));
         }
-
-        return convertToQueue(result, MEDIA_ID_MUSICS_BY_SEARCH, query);
     }
-
 
     public static int getMusicIndexOnQueue(Iterable<MediaSessionCompat.QueueItem> queue,
              String mediaId) {
@@ -158,11 +170,11 @@ public class QueueHelper {
     }
 
     public static List<MediaSessionCompat.QueueItem> convertToQueue(
-            Iterable<MediaMetadataCompat> tracks, String... categories) {
+            Iterator<MediaMetadataCompat> tracks, String... categories) {
         List<MediaSessionCompat.QueueItem> queue = new ArrayList<>();
         int count = 0;
-        for (MediaMetadataCompat track : tracks) {
-
+        while (tracks.hasNext()) {
+            MediaMetadataCompat track = tracks.next();
             // We create a hierarchy-aware mediaID, so we know what the queue is about by looking
             // at the QueueItem media IDs.
             String hierarchyAwareMediaID = MediaIDHelper.createMediaID(
@@ -188,18 +200,8 @@ public class QueueHelper {
      * @param musicProvider the provider used for fetching music.
      * @return list containing {@link MediaSessionCompat.QueueItem}'s
      */
-    public static List<MediaSessionCompat.QueueItem> getRandomQueue(MusicProvider musicProvider) {
-        List<MediaMetadataCompat> result = new ArrayList<>(RANDOM_QUEUE_SIZE);
-        Iterable<MediaMetadataCompat> shuffled = musicProvider.getShuffledMusic();
-        for (MediaMetadataCompat metadata: shuffled) {
-            if (result.size() == RANDOM_QUEUE_SIZE) {
-                break;
-            }
-            result.add(metadata);
-        }
-        LogHelper.d(TAG, "getRandomQueue: result.size=", result.size());
-
-        return convertToQueue(result, MEDIA_ID_MUSICS_BY_SEARCH, "random");
+    public static void getRandomQueue(MusicProvider musicProvider, QueryResult qr) {
+        musicProvider.getShuffledMusic(FetchToQueryResult(qr, MEDIA_ID_MUSICS_BY_SEARCH, "random"));
     }
 
     public static boolean isIndexPlayable(int index, List<MediaSessionCompat.QueueItem> queue) {

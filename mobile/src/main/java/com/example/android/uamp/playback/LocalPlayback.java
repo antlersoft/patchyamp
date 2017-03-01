@@ -173,45 +173,46 @@ public class LocalPlayback implements Playback, AudioManager.OnAudioFocusChangeL
         } else {
             mState = PlaybackStateCompat.STATE_STOPPED;
             relaxResources(false); // release everything except MediaPlayer
-            MediaMetadataCompat track = mMusicProvider.getMusic(
-                    MediaIDHelper.extractMusicIDFromMediaID(item.getDescription().getMediaId()));
+            mMusicProvider.getMusic(
+                    MediaIDHelper.extractMusicIDFromMediaID(item.getDescription().getMediaId()), (track)-> {
 
-            //noinspection ResourceType
-            String source = track.getString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE);
-            if (source != null) {
-                source = source.replaceAll(" ", "%20"); // Escape spaces for URLs
-            }
+                        //noinspection ResourceType
+                        String source = track.getString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE);
+                        if (source != null) {
+                            source = source.replaceAll(" ", "%20"); // Escape spaces for URLs
+                        }
 
-            try {
-                createMediaPlayerIfNeeded();
+                        try {
+                            createMediaPlayerIfNeeded();
 
-                mState = PlaybackStateCompat.STATE_BUFFERING;
+                            mState = PlaybackStateCompat.STATE_BUFFERING;
 
-                mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                mMediaPlayer.setDataSource(source);
+                            mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                            mMediaPlayer.setDataSource(source);
 
-                // Starts preparing the media player in the background. When
-                // it's done, it will call our OnPreparedListener (that is,
-                // the onPrepared() method on this class, since we set the
-                // listener to 'this'). Until the media player is prepared,
-                // we *cannot* call start() on it!
-                mMediaPlayer.prepareAsync();
+                            // Starts preparing the media player in the background. When
+                            // it's done, it will call our OnPreparedListener (that is,
+                            // the onPrepared() method on this class, since we set the
+                            // listener to 'this'). Until the media player is prepared,
+                            // we *cannot* call start() on it!
+                            mMediaPlayer.prepareAsync();
 
-                // If we are streaming from the internet, we want to hold a
-                // Wifi lock, which prevents the Wifi radio from going to
-                // sleep while the song is playing.
-                mWifiLock.acquire();
+                            // If we are streaming from the internet, we want to hold a
+                            // Wifi lock, which prevents the Wifi radio from going to
+                            // sleep while the song is playing.
+                            mWifiLock.acquire();
 
-                if (mCallback != null) {
-                    mCallback.onPlaybackStatusChanged(mState);
-                }
+                            if (mCallback != null) {
+                                mCallback.onPlaybackStatusChanged(mState);
+                            }
 
-            } catch (IOException ex) {
-                LogHelper.e(TAG, ex, "Exception playing song");
-                if (mCallback != null) {
-                    mCallback.onError(ex.getMessage());
-                }
-            }
+                        } catch (IOException ex) {
+                            LogHelper.e(TAG, ex, "Exception playing song");
+                            if (mCallback != null) {
+                                mCallback.onError(ex.getMessage());
+                            }
+                        }
+                    });
         }
     }
 
