@@ -23,6 +23,8 @@ import android.support.v4.media.MediaMetadataCompat;
 import com.antlersoft.patchyamp.db.ConnectionBean;
 import com.antoniotari.reactiveampache.Exceptions.AmpacheApiException;
 import com.antoniotari.reactiveampache.api.AmpacheApi;
+import com.antoniotari.reactiveampache.models.Album;
+import com.antoniotari.reactiveampache.models.Artist;
 import com.antoniotari.reactiveampache.models.Playlist;
 import com.antoniotari.reactiveampache.models.Song;
 import com.antoniotari.reactiveampache.models.Tag;
@@ -46,7 +48,7 @@ public class AmpacheSource implements MusicProviderSource {
     Object mLock = new Object();
     private volatile EAmpacheState mState = EAmpacheState.INITIAL;
     private MusicProviderSource.ErrorCallback mErrorCallback;
-
+    private static ArrayList<MediaMetadataCompat> mEmptyMetadata = new ArrayList<>();
     public AmpacheSource(Context context) {
         AmpacheApi.INSTANCE.initSession(context);
     }
@@ -305,26 +307,135 @@ public class AmpacheSource implements MusicProviderSource {
 
     @Override
     public void GetSearchSongs(String anyMatch, MediaFetchResult toSetQueue) {
-
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                toSetQueue.setResult("Genre", mEmptyMetadata.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.searchSongs(anyMatch).subscribe((songs) -> {
+                toSetQueue.setResult(anyMatch, songIterator(songs));
+            }, throwable -> {
+                toSetQueue.setResult(anyMatch, mEmptyMetadata.iterator());
+                onError(throwable);
+            });
+        });
     }
 
     @Override
     public void GetArtists(MediaFetchResult result) {
-
-    }
-
-    @Override
-    public void GetArtistSongs(String id, MediaFetchResult result) {
-
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.setResult("Artists", mEmptyMetadata.iterator());
+                return;
+            }
+           AmpacheApi.INSTANCE.getArtists().subscribe((artists) -> {
+               List<MediaMetadataCompat> metadata = new ArrayList<MediaMetadataCompat>();
+               for (Artist a : artists) {
+                   MediaMetadataCompat description = new MediaMetadataCompat.Builder()
+                           .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, a.getId())
+                           .putString(MediaMetadataCompat.METADATA_KEY_TITLE, a.getName())
+                           .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, Integer.toString(a.getSongs()))
+                           .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, "android.resource://" +
+                                   "com.antlersoft.patchyamp/drawable/ic_by_genre")
+                           .build();
+                    metadata.add(description);
+               }
+               result.setResult("Artists", metadata.iterator());
+           }, throwable -> {
+               result.setResult("Artists", mEmptyMetadata.iterator());
+               onError(throwable);
+           });
+        });
     }
 
     @Override
     public void GetAlbums(MediaFetchResult result) {
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.setResult("Albums", mEmptyMetadata.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.getAlbums().subscribe((albums) -> {
+                List<MediaMetadataCompat> metadata = new ArrayList<MediaMetadataCompat>();
+                for (Album a : albums) {
+                    MediaMetadataCompat description = new MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, a.getId())
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, a.getName())
+                            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, a.getArtist().getName())
+                            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, a.getArt())
+                            .build();
+                    metadata.add(description);
+                }
+                result.setResult("Albums", metadata.iterator());
+            }, throwable -> {
+                result.setResult("Albums", mEmptyMetadata.iterator());
+                onError(throwable);
+            });
+        });
+    }
 
+    @Override
+    public void GetArtistAlbums(String id, MediaFetchResult result) {
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.setResult("Albums", mEmptyMetadata.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.getAlbumsFromArtist(id).subscribe((albums) -> {
+                List<MediaMetadataCompat> metadata = new ArrayList<MediaMetadataCompat>();
+                for (Album a : albums) {
+                    MediaMetadataCompat description = new MediaMetadataCompat.Builder()
+                            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, a.getId())
+                            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, a.getName())
+                            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, a.getArtist().getName())
+                            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, a.getArt())
+                            .build();
+                    metadata.add(description);
+                }
+                result.setResult("Albums", metadata.iterator());
+            }, throwable -> {
+                result.setResult("Albums", mEmptyMetadata.iterator());
+                onError(throwable);
+            });
+        });
+    }
+
+    @Override
+    public void GetArtistSongs(String id, MediaFetchResult result) {
+        final ArrayList<MediaMetadataCompat> items = new ArrayList<>();
+
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.setResult("Artist", items.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.getSongsFromArtist(id).subscribe((songs) -> {
+                result.setResult("Artist", songIterator(songs));
+            }, (throwable) -> {
+                mState = EAmpacheState.FAILURE;
+                result.setResult("Artist", items.iterator());
+                onError(throwable);
+            });
+        });
     }
 
     @Override
     public void GetAlbumSongs(String id, MediaFetchResult result) {
+        final ArrayList<MediaMetadataCompat> items = new ArrayList<>();
+
+        AsyncRunner.RunAsync(this::waitForInitialization, () -> {
+            if (mState != EAmpacheState.READY) {
+                result.setResult("Album", items.iterator());
+                return;
+            }
+            AmpacheApi.INSTANCE.getSongsFromAlbum(id).subscribe((songs) -> {
+                result.setResult("Album", songIterator(songs));
+            }, (throwable) -> {
+                mState = EAmpacheState.FAILURE;
+                result.setResult("Album", items.iterator());
+                onError(throwable);
+            });
+        });
 
     }
 

@@ -35,6 +35,12 @@
 <resources>
 
     <string name="app_name">Patchy AMP</string>
+    <string name="browse_albums">Albums</string>
+    <string name="browse_albums_subtitle">Songs by album</string>
+    <string name="browse_artists">Artists</string>
+    <string name="browse_artists_all_songs">All songs</string>
+    <string name="browse_artists_all_songs_subtitle">All songs by artist</string>
+    <string name="browse_artists_subtitle">Albums by artist</string>
     <string name="browse_genres">Genres</string>
     <string name="browse_genre_subtitle">Songs by genre</string>
     <string name="browse_musics_by_genre_subtitle">%1$s songs</string>

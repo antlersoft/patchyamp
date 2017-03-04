@@ -38,7 +38,6 @@ import android.os.Bundle;
 import android.support.v4.media.MediaMetadataCompat;
 
 import java.util.Iterator;
-import java.util.List;
 
 public interface MusicProviderSource {
     String CUSTOM_METADATA_TRACK_SOURCE = "__SOURCE__";
@@ -73,6 +72,7 @@ public interface MusicProviderSource {
     void GetGenreSongs(String genreId, MediaFetchResult toSetQueue);
     void GetSearchSongs(String anyMatch, MediaFetchResult toSetQueue);
     void GetArtists(MediaFetchResult result);
+    void GetArtistAlbums(String id, MediaFetchResult result);
     void GetArtistSongs(String id, MediaFetchResult result);
     void GetAlbums(MediaFetchResult result);
     void GetAlbumSongs(String id, MediaFetchResult result);
