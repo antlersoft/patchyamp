@@ -155,7 +155,7 @@ public class QueueManager {
         });
     }
 
-    public void setQueueFromMusic(String mediaId, Runnable toContinue) {
+    public void setQueueFromMusic(final String mediaId, final Runnable toContinue) {
         LogHelper.d(TAG, "setQueueFromMusic", mediaId);
 
         // The mediaId used here is not the unique musicId. This one comes from the
@@ -171,7 +171,7 @@ public class QueueManager {
             String queueTitle = mResources.getString(R.string.browse_musics_by_genre_subtitle,
                     MediaIDHelper.extractBrowseCategoryValueFromMediaID(mediaId));
             QueueHelper.getPlayingQueue(mediaId, mMusicProvider, (queue) -> {
-                setCurrentQueue(queueTitle, queue);
+                setCurrentQueue(queueTitle, queue, mediaId);
                 updateMetadata();
                 toContinue.run();
             });
