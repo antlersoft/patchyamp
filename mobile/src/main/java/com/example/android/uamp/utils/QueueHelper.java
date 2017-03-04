@@ -50,6 +50,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_ALBUMS;
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_ARTIST_SONGS;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_GENRE;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_SEARCH;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_PLAYLISTS;
@@ -87,7 +89,6 @@ public class QueueHelper {
         String categoryValue = hierarchy[1];
         LogHelper.d(TAG, "Creating playing queue for ", categoryType, ",  ", categoryValue);
 
-        // This sample only supports genre and by_search category types.
         if (categoryType.equals(MEDIA_ID_MUSICS_BY_GENRE)) {
             musicProvider.getMusicByGenre(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
             return;
@@ -96,6 +97,12 @@ public class QueueHelper {
             return;
         } else if (categoryType.equals(MEDIA_ID_PLAYLISTS)) {
             musicProvider.getMusicByPlaylist(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
+            return;
+        } else if (categoryType.equals(MEDIA_ID_ALBUMS)) {
+            musicProvider.getMusicByAlbum(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
+            return;
+        } else if (categoryType.equals(MEDIA_ID_ARTIST_SONGS)) {
+            musicProvider.getMusicByArtist(categoryValue, FetchToQueryResult(result, hierarchy[0], hierarchy[1]));
             return;
         }
 

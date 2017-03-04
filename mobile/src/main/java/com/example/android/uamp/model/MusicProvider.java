@@ -257,6 +257,24 @@ public class MusicProvider {
         });
     }
 
+    public void getMusicByAlbum(String albumId, MusicProviderSource.MediaFetchResult result) {
+        if (returnExisting(MEDIA_ID_ALBUMS, albumId, result)) {
+            return;
+        }
+        mSource.GetAlbumSongs(albumId, (title, items) -> {
+            result.setResult(title, readSongsFromIterator(title, items, MEDIA_ID_ALBUMS, albumId).iterator());
+        });
+    }
+
+    public void getMusicByArtist(String artistId, MusicProviderSource.MediaFetchResult result) {
+        if (returnExisting(MEDIA_ID_ARTIST_SONGS, artistId, result)) {
+            return;
+        }
+        mSource.GetArtistSongs(artistId, (title, items) -> {
+            result.setResult(title, readSongsFromIterator(title, items, MEDIA_ID_ARTIST_SONGS, artistId).iterator());
+        });
+    }
+
     public void getChildren(String mediaId, Resources resources, QueueManager queueManager, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
         List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
         String[] hierarchy;
