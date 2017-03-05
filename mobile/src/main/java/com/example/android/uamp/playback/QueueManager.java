@@ -166,6 +166,7 @@ public class QueueManager {
         boolean canReuseQueue = false;
         if (isSameBrowsingCategory(mediaId)) {
             canReuseQueue = setCurrentQueueItem(mediaId);
+            updateMetadata();
         }
         if (!canReuseQueue) {
             String queueTitle = mResources.getString(R.string.browse_musics_by_genre_subtitle,
@@ -175,6 +176,8 @@ public class QueueManager {
                 updateMetadata();
                 toContinue.run();
             });
+        } else {
+            toContinue.run();
         }
     }
 
