@@ -34,7 +34,12 @@ import com.example.android.uamp.utils.LogHelper;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+
 
 /**
  * An implementation of MusicProviderSource based on the reactive-ampache library.
@@ -49,6 +54,8 @@ public class AmpacheSource implements MusicProviderSource {
     private volatile EAmpacheState mState = EAmpacheState.INITIAL;
     private MusicProviderSource.ErrorCallback mErrorCallback;
     private static ArrayList<MediaMetadataCompat> mEmptyMetadata = new ArrayList<>();
+    private ScheduledExecutorService _executorService = Executors.newScheduledThreadPool(1);
+    private ScheduledFuture<?> _pingFuture;
     public AmpacheSource(Context context) {
         AmpacheApi.INSTANCE.initSession(context);
     }
@@ -187,10 +194,18 @@ public class AmpacheSource implements MusicProviderSource {
                         mLock.notifyAll();
                     }
                 }, () -> {
+            ScheduledFuture<?> f = _pingFuture;
+            _pingFuture = null;
+            if (f != null) {
+                f.cancel(false);
+            }
             AmpacheApi.INSTANCE.initUser(bean.getUrl(), bean.getLogin(), bean.getPassword())
                     .flatMap(aVoid -> AmpacheApi.INSTANCE.handshake())
                     .subscribe(handshakeResponse -> {
                         LogHelper.i(TAG, "Expiration: " + handshakeResponse.getSession_expire());
+                        _pingFuture = _executorService.scheduleAtFixedRate(()->{
+                            AmpacheApi.INSTANCE.ping().subscribe();
+                        }, 300, 300, TimeUnit.SECONDS);
                         synchronized (mLock) {
                             mState = EAmpacheState.READY;
                             mLock.notifyAll();
