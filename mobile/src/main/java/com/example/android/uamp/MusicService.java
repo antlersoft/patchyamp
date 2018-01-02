@@ -44,6 +44,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
 import android.support.annotation.NonNull;
+import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaBrowserCompat.MediaItem;
 import android.support.v4.media.MediaBrowserServiceCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -57,6 +58,8 @@ import com.antlersoft.patchyamp.AmpacheSource;
 import com.antlersoft.patchyamp.R;
 
 import com.example.android.uamp.model.MusicProvider;
+import com.example.android.uamp.model.MusicProviderSource;
+import com.example.android.uamp.model.ResultWrapper;
 import com.example.android.uamp.playback.CastPlayback;
 import com.example.android.uamp.playback.LocalPlayback;
 import com.example.android.uamp.playback.Playback;
@@ -65,6 +68,7 @@ import com.example.android.uamp.playback.QueueManager;
 import com.example.android.uamp.ui.NowPlayingActivity;
 import com.example.android.uamp.utils.CarHelper;
 import com.example.android.uamp.utils.LogHelper;
+import com.example.android.uamp.utils.MediaIDHelper;
 import com.example.android.uamp.utils.TvHelper;
 import com.example.android.uamp.utils.WearHelper;
 import com.google.android.gms.cast.framework.CastContext;
@@ -352,6 +356,11 @@ public class MusicService extends MediaBrowserServiceCompat implements
     @Override
     public void onLoadChildren(@NonNull final String parentMediaId,
                                @NonNull final Result<List<MediaItem>> result) {
+        onLoadChildren(parentMediaId, new ResultWrapper<List<MediaItem>>(result));
+    }
+
+    private void onLoadChildren(@NonNull final String parentMediaId,
+                               @NonNull final ResultWrapper<List<MediaItem>> result) {
         LogHelper.d(TAG, "OnLoadChildren: parentMediaId=", parentMediaId);
         if (MEDIA_ID_EMPTY_ROOT.equals(parentMediaId)) {
             result.sendResult(new ArrayList<MediaItem>());
@@ -399,6 +408,33 @@ public class MusicService extends MediaBrowserServiceCompat implements
     @Override
     public void onPlaybackStateUpdated(PlaybackStateCompat newState) {
         mSession.setPlaybackState(newState);
+    }
+
+    @Override
+    public void onLoadItem(String itemId, final Result<MediaItem> result) {
+        result.detach();
+        if (MediaIDHelper.isBrowseable(itemId))
+        {
+            onLoadChildren(MediaIDHelper.getParentMediaID(itemId), new ResultWrapper<List<MediaItem>>(null) {
+                @Override
+                public void onSendResult(List<MediaItem> children) {
+                    MediaItem child = null;
+                    for  (MediaItem i : children)
+                    {
+                        if (i.getMediaId().equals(itemId))
+                        {
+                            child = i;
+                            break;
+                        }
+                    }
+                    result.sendResult(child);
+                }
+            });
+        }
+        else
+        {
+            mMusicProvider.getMusic(itemId, new ResultWrapper<>(result));
+        }
     }
 
     private void registerCarConnectionReceiver() {

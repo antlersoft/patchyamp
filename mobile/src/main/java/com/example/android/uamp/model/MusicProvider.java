@@ -192,6 +192,15 @@ public class MusicProvider {
         }
     }
 
+    public void getMusic(String id, final ResultWrapper<MediaBrowserCompat.MediaItem> result) {
+        getMusic(id, new MusicProviderSource.ItemResult() {
+            @Override
+            public void setResult(MediaMetadataCompat item) {
+                result.sendResult(createMediaItem(item, MediaIDHelper.createMediaID(null, MediaIDHelper.getHierarchy(id)), MediaIDHelper.extractMusicIDFromMediaID(id)));
+            }
+        });
+    }
+
     private synchronized boolean returnExisting(String category, String value, MusicProviderSource.MediaFetchResult result) {
         if (mLastCategory.equals(category) && mLastCategoryValue.equals(value)) {
             final List<MutableMediaMetadata> lastRead = mLastRead;
@@ -275,7 +284,7 @@ public class MusicProvider {
         });
     }
 
-    public void getChildren(String mediaId, Resources resources, QueueManager queueManager, MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result) {
+    public void getChildren(String mediaId, Resources resources, QueueManager queueManager, ResultWrapper<List<MediaBrowserCompat.MediaItem>> result) {
         List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
         String[] hierarchy;
 

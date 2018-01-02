@@ -64,7 +64,7 @@ public class MusicPlayerActivity extends BaseActivity
      * Optionally used with {@link #EXTRA_START_FULLSCREEN} to carry a MediaDescription to
      * the {@link FullScreenPlayerActivity}, speeding up the screen rendering
      * while the {@link android.support.v4.media.session.MediaControllerCompat} is connecting.
-     */
+            */
     public static final String EXTRA_CURRENT_MEDIA_DESCRIPTION =
         "com.example.android.uamp.CURRENT_MEDIA_DESCRIPTION";
 
