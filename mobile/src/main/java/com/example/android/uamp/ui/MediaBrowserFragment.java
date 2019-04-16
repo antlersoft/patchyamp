@@ -145,10 +145,19 @@ public class MediaBrowserFragment extends Fragment {
                         "  count=" + children.size());
                     checkForUserVisibleErrors(children.isEmpty());
                     mBrowserAdapter.clear();
+                    MediaBrowserCompat.MediaItem firstItem = null;
                     for (MediaBrowserCompat.MediaItem item : children) {
+                        if (firstItem == null)
+                        {
+                            firstItem = item;
+                        }
                         mBrowserAdapter.add(item);
                     }
                     mBrowserAdapter.notifyDataSetChanged();
+                    if (firstItem!=null && firstItem.isPlayable() && mMediaFragmentListener != null && MediaIDHelper.isPlaylist(parentId))
+                    {
+                        mMediaFragmentListener.onMediaItemSelected(firstItem);
+                    }
                 } catch (Throwable t) {
                     LogHelper.e(TAG, "Error on childrenloaded", t);
                 }

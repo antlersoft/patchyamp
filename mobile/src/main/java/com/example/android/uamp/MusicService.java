@@ -191,10 +191,12 @@ public class MusicService extends MediaBrowserServiceCompat implements
                 LogHelper.e(TAG, "Can't send to session this message: "+message);
             }
             StringBuilder builder = new StringBuilder(message);
-            builder.append('\n');
-            builder.append(throwable.getLocalizedMessage());
-            builder.append('\n');
-            builder.append(Log.getStackTraceString(throwable));
+            if (throwable  != null) {
+                builder.append('\n');
+                builder.append(throwable.getLocalizedMessage());
+                builder.append('\n');
+                builder.append(Log.getStackTraceString(throwable));
+            }
             Bundle extras = new Bundle();
             extras.putCharSequence(MusicProvider.ERROR_REPORT_EVENT_MESSAGE, builder);
             mSession.sendSessionEvent(MusicProvider.ERROR_REPORT_EVENT, extras);

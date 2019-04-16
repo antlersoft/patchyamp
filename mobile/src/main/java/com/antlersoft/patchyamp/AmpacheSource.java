@@ -159,7 +159,7 @@ public class AmpacheSource implements MusicProviderSource {
                 onError(throwable);
             });
         }, () -> {
-            if (! complain.isEmpty()) {
+            if (! complain.isEmpty() && mErrorCallback!=null) {
                 mErrorCallback.onError(complain.get(0), null);
             }
         });

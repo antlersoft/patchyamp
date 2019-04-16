@@ -149,6 +149,16 @@ public class MediaIDHelper {
         return mediaID.indexOf(LEAF_SEPARATOR) < 0;
     }
 
+    public static boolean isPlaylist(@NonNull String mediaId) {
+        boolean result = false;
+        if (isBrowseable(mediaId))
+        {
+            String[] hierarchy = getHierarchy(mediaId);
+            result = (hierarchy.length > 1 && hierarchy[hierarchy.length - 2].equals(MEDIA_ID_PLAYLISTS));
+        }
+        return result;
+    }
+
     public static String getParentMediaID(@NonNull String mediaID) {
         String[] hierarchy = getHierarchy(mediaID);
         if (!isBrowseable(mediaID)) {
