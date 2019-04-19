@@ -81,6 +81,7 @@ public class MediaBrowserFragment extends Fragment {
 
     private BrowseAdapter mBrowserAdapter;
     private String mMediaId;
+    private boolean mSameId;
     private MediaFragmentListener mMediaFragmentListener;
     private View mErrorView;
     private TextView mErrorMessage;
@@ -154,7 +155,7 @@ public class MediaBrowserFragment extends Fragment {
                         mBrowserAdapter.add(item);
                     }
                     mBrowserAdapter.notifyDataSetChanged();
-                    if (firstItem!=null && firstItem.isPlayable() && mMediaFragmentListener != null && MediaIDHelper.isPlaylist(parentId))
+                    if (! mSameId && firstItem!=null && firstItem.isPlayable() && mMediaFragmentListener != null && MediaIDHelper.isPlaylist(parentId))
                     {
                         mMediaFragmentListener.onMediaItemSelected(firstItem);
                     }
@@ -273,6 +274,7 @@ public class MediaBrowserFragment extends Fragment {
             controller.registerCallback(mMediaControllerCallback);
         }
 
+        mSameId = mMediaId != null && mMediaId.equals(getMediaId());
         mMediaId = getMediaId();
         if (mMediaId == null) {
             mMediaId = mMediaFragmentListener.getMediaBrowser().getRoot();
