@@ -162,8 +162,7 @@ public class MediaItemViewHolder {
     }
 
     public static int getStateFromController(Context context) {
-        MediaControllerCompat controller = ((FragmentActivity) context)
-                .getSupportMediaController();
+        MediaControllerCompat controller = MediaControllerCompat.getMediaController((Activity)context);
         PlaybackStateCompat pbState = controller.getPlaybackState();
         if (pbState == null ||
                 pbState.getState() == PlaybackStateCompat.STATE_ERROR) {

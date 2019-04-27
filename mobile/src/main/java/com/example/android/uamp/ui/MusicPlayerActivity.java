@@ -36,9 +36,11 @@ package com.example.android.uamp.ui;
 import android.app.FragmentTransaction;
 import android.app.SearchManager;
 import android.content.Intent;
+import android.os.Parcelable;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.session.MediaControllerCompat;
 import android.text.TextUtils;
 
 import com.antlersoft.patchyamp.R;
@@ -99,7 +101,7 @@ public class MusicPlayerActivity extends BaseActivity
     public void onMediaItemSelected(MediaBrowserCompat.MediaItem item) {
         LogHelper.d(TAG, "onMediaItemSelected, mediaId=" + item.getMediaId());
         if (item.isPlayable()) {
-            getSupportMediaController().getTransportControls()
+            MediaControllerCompat.getMediaController(this).getTransportControls()
                     .playFromMediaId(item.getMediaId(), null);
         } else if (item.isBrowsable()) {
             navigateToBrowser(item.getMediaId());
@@ -131,7 +133,7 @@ public class MusicPlayerActivity extends BaseActivity
                 .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP |
                     Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 .putExtra(EXTRA_CURRENT_MEDIA_DESCRIPTION,
-                        (Bundle)intent.getParcelableExtra(EXTRA_CURRENT_MEDIA_DESCRIPTION));
+                        (Parcelable)intent.getParcelableExtra(EXTRA_CURRENT_MEDIA_DESCRIPTION));
             startActivity(fullScreenIntent);
         }
     }
@@ -195,7 +197,7 @@ public class MusicPlayerActivity extends BaseActivity
             // send it to the media session and set it to null, so it won't play again
             // when the activity is stopped/started or recreated:
             String query = mVoiceSearchParams.getString(SearchManager.QUERY);
-            getSupportMediaController().getTransportControls()
+            MediaControllerCompat.getMediaController(this).getTransportControls()
                     .playFromSearch(query, mVoiceSearchParams);
             mVoiceSearchParams = null;
         }

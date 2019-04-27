@@ -84,7 +84,7 @@ public class AmpacheSource implements MusicProviderSource {
     }
 
     private Iterator<MediaMetadataCompat> songIterator(Iterable<Song> songs) {
-        final Iterator<Song> s = songs.iterator();
+        final Iterator<Song> s = songs == null ? new ArrayList<Song>().iterator() : songs.iterator();
         return new Iterator<MediaMetadataCompat>() {
             @Override
             public boolean hasNext() {

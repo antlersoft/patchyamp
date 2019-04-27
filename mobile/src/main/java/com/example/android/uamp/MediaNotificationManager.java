@@ -51,10 +51,11 @@ import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
-import android.support.v7.app.NotificationCompat;
-
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.media.app.NotificationCompat.MediaStyle;
 import com.antlersoft.patchyamp.R;
 
+import com.antlersoft.patchyamp.bc.BcFactory;
 import com.example.android.uamp.ui.MusicPlayerActivity;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.ResourceHelper;
@@ -96,6 +97,7 @@ public class MediaNotificationManager extends BroadcastReceiver {
     private final int mNotificationColor;
 
     private boolean mStarted = false;
+    String SONG_CHANNEL_ID = "SongPlaying";
 
     public MediaNotificationManager(MusicService service) throws RemoteException {
         mService = service;
@@ -103,8 +105,12 @@ public class MediaNotificationManager extends BroadcastReceiver {
 
         mNotificationColor = ResourceHelper.getThemeColor(mService, R.attr.colorPrimary,
                 Color.DKGRAY);
+        BcFactory.getInstance().getNotificationChannelCreator().createChannel(service, SONG_CHANNEL_ID, "Patchy AMP Songs",
+                "Shows when Patchy AMP is playing and what song", NotificationManagerCompat.IMPORTANCE_LOW,
+                true, false);
 
         mNotificationManager = NotificationManagerCompat.from(service);
+
 
         String pkg = mService.getPackageName();
         mPauseIntent = PendingIntent.getBroadcast(mService, REQUEST_CODE,
@@ -276,7 +282,7 @@ public class MediaNotificationManager extends BroadcastReceiver {
             return null;
         }
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mService);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mService, SONG_CHANNEL_ID);
         int playPauseButtonPosition = 0;
 
         // If skip to previous action is enabled
@@ -318,7 +324,7 @@ public class MediaNotificationManager extends BroadcastReceiver {
         }
 
         notificationBuilder
-                .setStyle(new NotificationCompat.MediaStyle()
+                .setStyle(new MediaStyle()
                     .setShowActionsInCompactView(
                             new int[]{playPauseButtonPosition})  // show only play/pause in compact view
                     .setMediaSession(mSessionToken))

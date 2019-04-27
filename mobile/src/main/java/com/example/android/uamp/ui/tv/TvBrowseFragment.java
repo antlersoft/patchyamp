@@ -104,7 +104,7 @@ public class TvBrowseFragment extends BrowseSupportFragment {
         @Override
         public void onMetadataChanged(MediaMetadataCompat metadata) {
             if (metadata != null) {
-                MediaControllerCompat mediaController = getActivity().getSupportMediaController();
+                MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(getActivity());
                 long activeQueueId;
                 if (mediaController.getPlaybackState() == null) {
                     activeQueueId = MediaSessionCompat.QueueItem.UNKNOWN_ID;
@@ -119,7 +119,7 @@ public class TvBrowseFragment extends BrowseSupportFragment {
         @Override
         public void onQueueChanged(List<MediaSessionCompat.QueueItem> queue) {
             // queue has changed somehow
-            MediaControllerCompat mediaController = getActivity().getSupportMediaController();
+            MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(getActivity());
 
             long activeQueueId;
             if (mediaController.getPlaybackState() == null) {
@@ -177,7 +177,7 @@ public class TvBrowseFragment extends BrowseSupportFragment {
                         }
                     }
 
-                    MediaControllerCompat mediaController = getActivity().getSupportMediaController();
+                    MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(getActivity());
 
                     if (mediaController.getQueue() != null
                             && !mediaController.getQueue().isEmpty()) {
@@ -271,8 +271,7 @@ public class TvBrowseFragment extends BrowseSupportFragment {
 
                 } else if (clickedItem instanceof MediaSessionCompat.QueueItem) {
                     MediaSessionCompat.QueueItem item = (MediaSessionCompat.QueueItem) clickedItem;
-                    MediaControllerCompat mediaController = getActivity()
-                            .getSupportMediaController();
+                    MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(getActivity());
 
                     if (!QueueHelper.isQueueItemPlaying(getActivity(), item)) {
                         mediaController.getTransportControls()
@@ -316,7 +315,7 @@ public class TvBrowseFragment extends BrowseSupportFragment {
             }
             mSubscribedMediaIds.clear();
         }
-        MediaControllerCompat mediaController = getActivity().getSupportMediaController();
+        MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(getActivity());
         if (mediaController != null) {
             mediaController.unregisterCallback(mMediaControllerCallback);
         }
@@ -340,7 +339,7 @@ public class TvBrowseFragment extends BrowseSupportFragment {
         subscribeToMediaId(mediaId, mSubscriptionCallback);
 
         // Add MediaController callback so we can redraw the list when metadata changes:
-        MediaControllerCompat mediaController = getActivity().getSupportMediaController();
+        MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(getActivity());
         if (mediaController != null) {
             mediaController.registerCallback(mMediaControllerCallback);
         }

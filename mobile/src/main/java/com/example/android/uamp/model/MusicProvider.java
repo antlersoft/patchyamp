@@ -371,6 +371,17 @@ public class MusicProvider {
             });
             return;
         } else if (mediaId.startsWith(MEDIA_ID_ARTIST_SONGS)) {
+            String[] hier = MediaIDHelper.getHierarchy(mediaId);
+            if (hier.length < 2)
+            {
+                mSource.GetArtists((title,iterator)->{
+                    while (iterator.hasNext()) {
+                        mediaItems.add(createBrowsableMediaItemForGenre(iterator.next(), MEDIA_ID_ARTISTS));
+                    }
+                    result.sendResult(mediaItems);
+                });
+                return;
+            }
             String artistId = MediaIDHelper.getHierarchy(mediaId)[1];
             if (returnExisting(MEDIA_ID_ARTIST_SONGS, artistId, (title, it)->{
                 while (it.hasNext()) {

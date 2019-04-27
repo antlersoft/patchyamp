@@ -130,7 +130,7 @@ public class TvBrowseActivity extends FragmentActivity
                     try {
                         MediaControllerCompat mediaController = new MediaControllerCompat(
                                 TvBrowseActivity.this, mMediaBrowser.getSessionToken());
-                        setSupportMediaController(mediaController);
+                        MediaControllerCompat.setMediaController(TvBrowseActivity.this, mediaController);
                         navigateToBrowser(mMediaId);
                     } catch (RemoteException e) {
                         LogHelper.e(TAG, e, "could not connect media controller");
@@ -145,7 +145,7 @@ public class TvBrowseActivity extends FragmentActivity
                 @Override
                 public void onConnectionSuspended() {
                     LogHelper.d(TAG, "onConnectionSuspended");
-                    setSupportMediaController(null);
+                    MediaControllerCompat.setMediaController(TvBrowseActivity.this, null);
                 }
             };
 }

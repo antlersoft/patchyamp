@@ -156,7 +156,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
                 openLoginDialog(false);
                 return;
             }
-            MediaControllerCompat c = getSupportMediaController();
+            MediaControllerCompat c = MediaControllerCompat.getMediaController(this);
             if (c!=null) {
                 c.sendCommand(MusicProvider.NEEDS_LOGIN_COMMAND, null, new ResultReceiver(mHandler) {
                     @Override
@@ -188,14 +188,14 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
     protected void onStop() {
         super.onStop();
         LogHelper.d(TAG, "Activity onStop");
-        if (getSupportMediaController() != null) {
-            getSupportMediaController().unregisterCallback(mMediaControllerCallback);
+        if (MediaControllerCompat.getMediaController(this) != null) {
+            MediaControllerCompat.getMediaController(this).unregisterCallback(mMediaControllerCallback);
         }
         mMediaBrowser.disconnect();
     }
 
     public void requestLogin(ConnectionBean toConnect) {
-        MediaControllerCompat c = getSupportMediaController();
+        MediaControllerCompat c = MediaControllerCompat.getMediaController(this);
         if (c!=null) {
             Bundle extras = new Bundle();
             extras.putParcelable(ConnectionBean.GEN_TABLE_NAME, toConnect.Gen_getValues());
@@ -253,7 +253,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
      * @return true if the MediaSession's state requires playback controls to be visible.
      */
     protected boolean shouldShowControls() {
-        MediaControllerCompat mediaController = getSupportMediaController();
+        MediaControllerCompat mediaController = MediaControllerCompat.getMediaController(this);
         if (mediaController == null ||
             mediaController.getMetadata() == null ||
             mediaController.getPlaybackState() == null) {
@@ -271,7 +271,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
 
     private void connectToSession(MediaSessionCompat.Token token) throws RemoteException {
         MediaControllerCompat mediaController = new MediaControllerCompat(this, token);
-        setSupportMediaController(mediaController);
+        MediaControllerCompat.setMediaController(this, mediaController);
         mediaController.registerCallback(mMediaControllerCallback);
 
         if (shouldShowControls()) {
