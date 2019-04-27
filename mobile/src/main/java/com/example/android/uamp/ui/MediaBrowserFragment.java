@@ -46,6 +46,7 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -82,6 +83,7 @@ public class MediaBrowserFragment extends Fragment {
     private BrowseAdapter mBrowserAdapter;
     private String mMediaId;
     private boolean mSameId;
+    private int mCurrentItemInQueue;
     private MediaFragmentListener mMediaFragmentListener;
     private View mErrorView;
     private TextView mErrorMessage;
@@ -124,6 +126,9 @@ public class MediaBrowserFragment extends Fragment {
             super.onPlaybackStateChanged(state);
             LogHelper.d(TAG, "Received state change: ", state);
             checkForUserVisibleErrors(false);
+            if (state.getState() == PlaybackStateCompat.STATE_PLAYING) {
+                mCurrentItemInQueue = (int)state.getActiveQueueItemId();
+            }
             mBrowserAdapter.notifyDataSetChanged();
         }
 
@@ -158,6 +163,11 @@ public class MediaBrowserFragment extends Fragment {
                     if (! mSameId && firstItem!=null && firstItem.isPlayable() && mMediaFragmentListener != null && MediaIDHelper.isPlaylist(parentId))
                     {
                         mMediaFragmentListener.onMediaItemSelected(firstItem);
+                    } else if (mSameId && firstItem.isPlayable() && mMediaFragmentListener != null
+                            && mCurrentItemInQueue != MediaSessionCompat.QueueItem.UNKNOWN_ID &&
+                            mCurrentItemInQueue < children.size())
+                    {
+                        mMediaFragmentListener.onMediaItemSelected(children.get(mCurrentItemInQueue));
                     }
                 } catch (Throwable t) {
                     LogHelper.e(TAG, "Error on childrenloaded", t);
@@ -263,7 +273,7 @@ public class MediaBrowserFragment extends Fragment {
     // fragment.onStart() or explicitly by the activity in the case where the connection
     // completes after the onStart()
     public void onConnected() {
-        if (isDetached()) {
+        if (isDetached() || getActivity()==null) {
             return;
         }
 
@@ -296,6 +306,9 @@ public class MediaBrowserFragment extends Fragment {
     }
 
     private void checkForUserVisibleErrors(boolean forceError) {
+        if (getActivity() == null) {
+            return;
+        }
         boolean showError = forceError;
         // If offline, message is about the lack of connectivity:
         if (!NetworkHelper.isOnline(getActivity())) {
