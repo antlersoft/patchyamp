@@ -37,6 +37,7 @@ package com.example.android.uamp.playback;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -94,7 +95,7 @@ public class QueueManager {
         return Arrays.equals(newBrowseHierarchy, currentBrowseHierarchy);
     }
 
-    private void setCurrentQueueIndex(int index) {
+    public void setCurrentQueueIndex(int index) {
         if (index >= 0 && index < mPlayingQueue.size()) {
             mCurrentIndex = index;
             mListener.onCurrentQueueIndexUpdated(mCurrentIndex);
@@ -134,7 +135,7 @@ public class QueueManager {
                     ". Current=", mCurrentIndex, " queue length=", mPlayingQueue.size());
             return false;
         }
-        mCurrentIndex = index;
+        setCurrentQueueIndex(index);
         return true;
     }
 
@@ -208,6 +209,9 @@ public class QueueManager {
         }
         mCurrentIndex = Math.max(index, 0);
         mListener.onQueueUpdated(title, newQueue);
+        if (! MediaIDHelper.isBrowseable(initialMediaId) && MediaIDHelper.isPlaylist(MediaIDHelper.getParentMediaID(initialMediaId))) {
+            setCurrentQueueIndex(mCurrentIndex);
+        }
     }
 
     public void updateMetadata() {

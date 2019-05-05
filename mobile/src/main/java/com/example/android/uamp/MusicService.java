@@ -57,6 +57,7 @@ import android.util.Log;
 import com.antlersoft.patchyamp.AmpacheSource;
 import com.antlersoft.patchyamp.R;
 
+import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.example.android.uamp.model.MusicProvider;
 import com.example.android.uamp.model.MusicProviderSource;
 import com.example.android.uamp.model.ResultWrapper;
@@ -163,6 +164,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
 
     private MusicProvider mMusicProvider;
     private PlaybackManager mPlaybackManager;
+    private PatchyDatabase mDatabase;
 
     private MediaSessionCompat mSession;
     private MediaNotificationManager mMediaNotificationManager;
@@ -177,6 +179,8 @@ public class MusicService extends MediaBrowserServiceCompat implements
     private boolean mIsConnectedToCar;
     private BroadcastReceiver mCarConnectionReceiver;
 
+    private boolean inRecursiveCall;
+
     /*
      * (non-Javadoc)
      * @see android.app.Service#onCreate()
@@ -185,8 +189,9 @@ public class MusicService extends MediaBrowserServiceCompat implements
     public void onCreate() {
         super.onCreate();
         LogHelper.d(TAG, "onCreate");
+        mDatabase = PatchyDatabase.getInstance(getApplicationContext());
 
-        mMusicProvider = MusicProvider.getInstance(new AmpacheSource(getApplicationContext()), (message, throwable) -> {
+        mMusicProvider = MusicProvider.getInstance(mDatabase, new AmpacheSource(getApplicationContext()), (message, throwable) -> {
             if (mSession == null) {
                 LogHelper.e(TAG, "Can't send to session this message: "+message);
             }
@@ -220,6 +225,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
                     @Override
                     public void onCurrentQueueIndexUpdated(int queueIndex) {
                         mPlaybackManager.handlePlayRequest();
+                        mDatabase.UpdateIndex(queueIndex);
                     }
 
                     @Override
@@ -369,7 +375,32 @@ public class MusicService extends MediaBrowserServiceCompat implements
         } else  {
             result.detach();
             // if music library is ready, return immediately
-            mMusicProvider.getChildren(parentMediaId, getResources(), mQueueManager, result);
+            mMusicProvider.getChildren(parentMediaId, getResources(), mQueueManager, new ResultWrapper<List<MediaItem>>(null) {
+                @Override
+                public void onSendResult(List<MediaItem> list) {
+                    result.sendResult(list);
+                    if (list.size() > 0 && list.get(0).isPlayable()) {
+                        int index = mDatabase.SameListIndex(parentMediaId);
+                        boolean setToIndex = false;
+                        if (index >= 0 && index < list.size()) {
+                            setToIndex = true;
+                        } else {
+                            if (MediaIDHelper.isPlaylist(parentMediaId)) {
+                                setToIndex = true;
+                                index = 0;
+                            }
+                        }
+                        if (setToIndex)
+                        {
+                            if (mQueueManager.isSameBrowsingCategory(parentMediaId)) {
+                                mQueueManager.setCurrentQueueIndex(index);
+                            } else {
+                                mPlaybackManager.setCurrentMediaId(list.get(index).getMediaId());
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
 

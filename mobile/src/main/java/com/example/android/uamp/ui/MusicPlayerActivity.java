@@ -71,6 +71,7 @@ public class MusicPlayerActivity extends BaseActivity
         "com.example.android.uamp.CURRENT_MEDIA_DESCRIPTION";
 
     private Bundle mVoiceSearchParams;
+    private Object mFragmentLock = new Object();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -158,23 +159,25 @@ public class MusicPlayerActivity extends BaseActivity
     }
 
     private void navigateToBrowser(String mediaId) {
-        LogHelper.d(TAG, "navigateToBrowser, mediaId=" + mediaId);
-        MediaBrowserFragment fragment = getBrowseFragment();
+        synchronized (mFragmentLock) {
+            LogHelper.d(TAG, "navigateToBrowser, mediaId=" + mediaId);
+            MediaBrowserFragment fragment = getBrowseFragment();
 
-        if (fragment == null || !TextUtils.equals(fragment.getMediaId(), mediaId)) {
-            fragment = new MediaBrowserFragment();
-            fragment.setMediaId(mediaId);
-            FragmentTransaction transaction = getFragmentManager().beginTransaction();
-            transaction.setCustomAnimations(
-                R.animator.slide_in_from_right, R.animator.slide_out_to_left,
-                R.animator.slide_in_from_left, R.animator.slide_out_to_right);
-            transaction.replace(R.id.container, fragment, FRAGMENT_TAG);
-            // If this is not the top level media (root), we add it to the fragment back stack,
-            // so that actionbar toggle and Back will work appropriately:
-            if (mediaId != null) {
-                transaction.addToBackStack(null);
+            if (fragment == null || !TextUtils.equals(fragment.getMediaId(), mediaId)) {
+                fragment = new MediaBrowserFragment();
+                fragment.setMediaId(mediaId);
+                FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                transaction.setCustomAnimations(
+                        R.animator.slide_in_from_right, R.animator.slide_out_to_left,
+                        R.animator.slide_in_from_left, R.animator.slide_out_to_right);
+                transaction.replace(R.id.container, fragment, FRAGMENT_TAG);
+                // If this is not the top level media (root), we add it to the fragment back stack,
+                // so that actionbar toggle and Back will work appropriately:
+                if (mediaId != null) {
+                    transaction.addToBackStack(null);
+                }
+                transaction.commit();
             }
-            transaction.commit();
         }
     }
 
@@ -200,6 +203,15 @@ public class MusicPlayerActivity extends BaseActivity
             MediaControllerCompat.getMediaController(this).getTransportControls()
                     .playFromSearch(query, mVoiceSearchParams);
             mVoiceSearchParams = null;
+        }
+        if (getBrowseFragment() == null)
+        {
+            synchronized (mFragmentLock) {
+                if (getBrowseFragment() == null) {
+                    navigateToBrowser(null);
+                    return;
+                }
+            }
         }
         getBrowseFragment().onConnected();
     }

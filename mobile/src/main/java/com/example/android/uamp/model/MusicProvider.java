@@ -45,6 +45,7 @@ import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 
 import com.antlersoft.patchyamp.R;
+import com.antlersoft.patchyamp.db.PatchyDatabase;
 import com.example.android.uamp.playback.QueueManager;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
@@ -85,22 +86,26 @@ public class MusicProvider {
     private String mLastCategoryValue;
     private String mLastTitle;
 
+    private PatchyDatabase mDatabase;
+
     private MusicProviderSource mSource;
 
     private MusicProviderSource.ErrorCallback mErrorCallback;
 
     private static MusicProvider mInstance;
 
-    public static MusicProvider getInstance(MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
+    public static MusicProvider getInstance(PatchyDatabase db, MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
         if (mInstance == null) {
-            mInstance = new MusicProvider(source, errorCallback);
+            mInstance = new MusicProvider(db, source, errorCallback);
         } else {
             mInstance.mErrorCallback = errorCallback;
+            mInstance.mDatabase = db;
         }
         return mInstance;
     }
 
-    private MusicProvider(MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
+    private MusicProvider(PatchyDatabase db, MusicProviderSource source, MusicProviderSource.ErrorCallback errorCallback) {
+        mDatabase = db;
         mSource = source;
         mErrorCallback = errorCallback;
 
@@ -224,6 +229,7 @@ public class MusicProvider {
             result.setResult(mLastTitle, it);
             return true;
         }
+        mDatabase.UpdateIndex(-1);
         return false;
     }
 

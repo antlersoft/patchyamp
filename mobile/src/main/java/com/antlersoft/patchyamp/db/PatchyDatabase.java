@@ -20,6 +20,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 /**
@@ -28,22 +29,25 @@ import java.util.ArrayList;
 
 public class PatchyDatabase extends SQLiteOpenHelper {
     static final int DBV_0_1_X = 1;
+    static final int DBV_0_2_x = 2;
 
     public final static String TAG = PatchyDatabase.class.toString();
 
     private static Object mInstanceLock = new Object();
-    private static PatchyDatabase mInstance;
+    private static WeakReference<PatchyDatabase> mInstanceRef;
 
     private PatchyDatabase(Context context) {
-        super(context, "PatchyDatabase", null, DBV_0_1_X);
+        super(context, "PatchyDatabase", null, DBV_0_2_x);
     }
 
     public static PatchyDatabase getInstance(Context context) {
         synchronized (mInstanceLock) {
-            if (mInstance == null) {
-                mInstance = new PatchyDatabase(context);
+            PatchyDatabase db=null;
+            if (mInstanceRef == null || (db = mInstanceRef.get())==null) {
+                db = new PatchyDatabase(context);
+                mInstanceRef = new WeakReference<>(db);
             }
-            return mInstance;
+            return db;
         }
     }
 
@@ -51,6 +55,7 @@ public class PatchyDatabase extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(AbstractConnectionBean.GEN_CREATE);
         db.execSQL(SavedState.GEN_CREATE);
+        db.execSQL(PlayingList.GEN_CREATE);
     }
 
     private void defaultUpgrade(SQLiteDatabase db)
@@ -58,6 +63,8 @@ public class PatchyDatabase extends SQLiteOpenHelper {
         Log.i(TAG, "Doing default database upgrade (drop and create tables)");
         db.execSQL("DROP TABLE IF EXISTS " + AbstractConnectionBean.GEN_TABLE_NAME);
         db.execSQL("DROP TABLE IF EXISTS " + SavedState.GEN_TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + PlayingList.GEN_TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + ListContent.GEN_TABLE_NAME);
         onCreate(db);
     }
 
@@ -66,16 +73,17 @@ public class PatchyDatabase extends SQLiteOpenHelper {
         if (oldVersion < DBV_0_1_X) {
             defaultUpgrade(db);
         }
-        /*
         else {
+            /*
             // Intermediate upgrades
             if (oldVersion < xxxx) {
                 ...
             } ...
+            */
             // Current upgrade
-            ...
+            db.execSQL(PlayingList.GEN_CREATE);
+            db.execSQL(ListContent.GEN_CREATE);
         }
-         */
     }
     /**
      * Return the object representing the app global state in the database, or null
@@ -90,6 +98,52 @@ public class PatchyDatabase extends SQLiteOpenHelper {
         if (recents.size() == 0)
             return null;
         return recents.get(0);
+    }
+
+    public int SameListIndex(String mediaId)
+    {
+        SQLiteDatabase db=getWritableDatabase();
+        try {
+            ArrayList<PlayingList> recents = new ArrayList<>(1);
+            PlayingList.getAll(db, PlayingList.GEN_TABLE_NAME, recents, PlayingList.GEN_NEW);
+            PlayingList current;
+            if (recents.size() == 0) {
+                current = new PlayingList();
+                current.setMediaId(mediaId);
+                current.Gen_insert(db);
+            } else {
+                current = recents.get(0);
+            }
+            if (mediaId != null && mediaId.equals(current.getMediaId())) {
+                return (int) current.getNowPlayingIndex();
+            } else {
+                current.setMediaId(mediaId);
+                current.setNowPlayingIndex(-1);
+                current.Gen_update(db);
+            }
+        } finally {
+            db.close();
+        }
+        return -1;
+    }
+
+    public void UpdateIndex(int index)
+    {
+        SQLiteDatabase db=getWritableDatabase();
+        try {
+            ArrayList<PlayingList> recents = new ArrayList<>(1);
+            PlayingList.getAll(db, PlayingList.GEN_TABLE_NAME, recents, PlayingList.GEN_NEW);
+            PlayingList current;
+            if (recents.size() == 0) {
+                return;
+            } else {
+                current = recents.get(0);
+            }
+            current.setNowPlayingIndex(index);
+            current.Gen_update(db);
+        } finally {
+            db.close();
+        }
     }
 
 }

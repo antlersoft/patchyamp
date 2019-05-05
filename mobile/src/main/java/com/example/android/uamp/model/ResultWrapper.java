@@ -41,6 +41,7 @@ public class ResultWrapper<T> {
                 throw new IllegalStateException("sendResult() called twice for: in ResultWrapper");
             }
             mSendResultCalled = true;
+            onSendResult(result);
         }
     }
 

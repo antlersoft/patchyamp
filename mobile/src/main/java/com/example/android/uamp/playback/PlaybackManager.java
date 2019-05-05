@@ -215,7 +215,6 @@ public class PlaybackManager implements Playback.Callback {
         // The media player finished playing the current song, so we go ahead
         // and start the next.
         if (mQueueManager.skipQueuePosition(1)) {
-            handlePlayRequest();
             mQueueManager.updateMetadata();
         } else {
             // If skipping was not possible, we stop and release the resources:
@@ -234,9 +233,13 @@ public class PlaybackManager implements Playback.Callback {
     }
 
     @Override
-    public void setCurrentMediaId(String mediaId) {
+    public void setCurrentMediaId(final String mediaId) {
         LogHelper.d(TAG, "setCurrentMediaId", mediaId);
-        mQueueManager.setQueueFromMusic(mediaId, () -> {});
+        mQueueManager.setQueueFromMusic(mediaId, () -> {
+            if (! MediaIDHelper.isBrowseable(mediaId) && MediaIDHelper.isPlaylist(MediaIDHelper.getParentMediaID(mediaId))) {
+                handlePlayRequest();
+            }
+        });
     }
 
 
@@ -340,9 +343,7 @@ public class PlaybackManager implements Playback.Callback {
         @Override
         public void onSkipToNext() {
             LogHelper.d(TAG, "skipToNext");
-            if (mQueueManager.skipQueuePosition(1)) {
-                handlePlayRequest();
-            } else {
+            if (! mQueueManager.skipQueuePosition(1)) {
                 handleStopRequest("Cannot skip");
             }
             mQueueManager.updateMetadata();
@@ -350,9 +351,7 @@ public class PlaybackManager implements Playback.Callback {
 
         @Override
         public void onSkipToPrevious() {
-            if (mQueueManager.skipQueuePosition(-1)) {
-                handlePlayRequest();
-            } else {
+            if (! mQueueManager.skipQueuePosition(-1)) {
                 handleStopRequest("Cannot skip");
             }
             mQueueManager.updateMetadata();
