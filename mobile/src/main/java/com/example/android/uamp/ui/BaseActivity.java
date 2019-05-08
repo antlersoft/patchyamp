@@ -113,6 +113,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
     protected void onStart() {
         super.onStart();
         LogHelper.d(TAG, "Activity onStart");
+        mConnectionCompleted = false;
 
         mControlsFragment = (PlaybackControlsFragment) getFragmentManager()
             .findFragmentById(R.id.fragment_playback_controls);

@@ -206,12 +206,8 @@ public class MusicPlayerActivity extends BaseActivity
         }
         if (getBrowseFragment() == null)
         {
-            synchronized (mFragmentLock) {
-                if (getBrowseFragment() == null) {
-                    navigateToBrowser(null);
-                    return;
-                }
-            }
+            // Fragment has gone away during login initiation
+            return;
         }
         getBrowseFragment().onConnected();
     }

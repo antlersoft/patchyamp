@@ -209,7 +209,7 @@ public class QueueManager {
         }
         mCurrentIndex = Math.max(index, 0);
         mListener.onQueueUpdated(title, newQueue);
-        if (! MediaIDHelper.isBrowseable(initialMediaId) && MediaIDHelper.isPlaylist(MediaIDHelper.getParentMediaID(initialMediaId))) {
+        if (initialMediaId != null && ! MediaIDHelper.isBrowseable(initialMediaId) && MediaIDHelper.isPlaylist(MediaIDHelper.getParentMediaID(initialMediaId))) {
             setCurrentQueueIndex(mCurrentIndex);
         }
     }

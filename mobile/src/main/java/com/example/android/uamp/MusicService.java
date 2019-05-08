@@ -179,7 +179,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
     private boolean mIsConnectedToCar;
     private BroadcastReceiver mCarConnectionReceiver;
 
-    private boolean inRecursiveCall;
+    private boolean mIsStickyService;
 
     /*
      * (non-Javadoc)
@@ -301,6 +301,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
         }
         // Reset the delay handler to enqueue a message to stop the service if
         // nothing is playing.
+        mIsStickyService = true;
         mDelayedStopHandler.removeCallbacksAndMessages(null);
         mDelayedStopHandler.sendEmptyMessageDelayed(0, STOP_DELAY);
         return START_STICKY;
@@ -374,12 +375,15 @@ public class MusicService extends MediaBrowserServiceCompat implements
             result.sendResult(new ArrayList<MediaItem>());
         } else  {
             result.detach();
+            if (MediaIDHelper.isPlaylist(parentMediaId)) {
+                setStickyService();
+            }
             // if music library is ready, return immediately
             mMusicProvider.getChildren(parentMediaId, getResources(), mQueueManager, new ResultWrapper<List<MediaItem>>(null) {
                 @Override
                 public void onSendResult(List<MediaItem> list) {
                     result.sendResult(list);
-                    if (list.size() > 0 && list.get(0).isPlayable()) {
+                    if (! isPlayingBack() && list.size() > 0 && list.get(0).isPlayable()) {
                         int index = mDatabase.SameListIndex(parentMediaId);
                         boolean setToIndex = false;
                         if (index >= 0 && index < list.size()) {
@@ -404,6 +408,22 @@ public class MusicService extends MediaBrowserServiceCompat implements
         }
     }
 
+    private void setStickyService()
+    {
+        mDelayedStopHandler.removeCallbacksAndMessages(null);
+        if (mIsStickyService) {
+            Log.d(TAG, "setStickyService: already sticky, sending delayed stop");
+            // Start service was already called
+            mDelayedStopHandler.sendEmptyMessageDelayed(0, STOP_DELAY);
+        } else {
+            Log.d(TAG, "setStickyService: calling startService");
+            // The service needs to continue running even after the bound client (usually a
+            // MediaController) disconnects, otherwise the music playback will stop.
+            // Calling startService(Intent) will keep the service running until it is explicitly killed.
+            startService(new Intent(getApplicationContext(), MusicService.class));
+        }
+    }
+
     /**
      * Callback method called from PlaybackManager whenever the music is about to play.
      */
@@ -411,12 +431,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
     public void onPlaybackStart() {
         mSession.setActive(true);
 
-        mDelayedStopHandler.removeCallbacksAndMessages(null);
-
-        // The service needs to continue running even after the bound client (usually a
-        // MediaController) disconnects, otherwise the music playback will stop.
-        // Calling startService(Intent) will keep the service running until it is explicitly killed.
-        startService(new Intent(getApplicationContext(), MusicService.class));
+        setStickyService();
     }
 
 
@@ -488,6 +503,10 @@ public class MusicService extends MediaBrowserServiceCompat implements
         unregisterReceiver(mCarConnectionReceiver);
     }
 
+    private boolean isPlayingBack() {
+        return mPlaybackManager!=null && mPlaybackManager.getPlayback() != null && mPlaybackManager.getPlayback().isPlaying();
+    }
+
     /**
      * A simple handler that stops the service if playback is not active (playing)
      */
@@ -502,11 +521,12 @@ public class MusicService extends MediaBrowserServiceCompat implements
         public void handleMessage(Message msg) {
             MusicService service = mWeakReference.get();
             if (service != null && service.mPlaybackManager.getPlayback() != null) {
-                if (service.mPlaybackManager.getPlayback().isPlaying()) {
+                if (service.isPlayingBack()) {
                     LogHelper.d(TAG, "Ignoring delayed stop since the media player is in use.");
                     return;
                 }
                 LogHelper.d(TAG, "Stopping service with delay handler.");
+                service.mIsStickyService = false;
                 service.stopSelf();
             }
         }
