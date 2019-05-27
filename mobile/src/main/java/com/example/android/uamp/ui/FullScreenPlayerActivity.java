@@ -39,6 +39,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
@@ -46,6 +47,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.RatingCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -60,6 +62,7 @@ import com.example.android.uamp.AlbumArtCache;
 import com.example.android.uamp.MusicService;
 import com.antlersoft.patchyamp.R;
 import com.example.android.uamp.utils.LogHelper;
+import com.example.android.uamp.utils.MediaIDHelper;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -81,6 +84,7 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
     private ImageView mSkipPrev;
     private ImageView mSkipNext;
     private ImageView mPlayPause;
+    private ImageView[] mStars = new ImageView[5];
     private TextView mStart;
     private TextView mEnd;
     private SeekBar mSeekbar;
@@ -91,6 +95,8 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
     private View mControllers;
     private Drawable mPauseDrawable;
     private Drawable mPlayDrawable;
+    private Drawable mStarOn;
+    private Drawable mStarOff;
     private ImageView mBackgroundImage;
 
     private String mCurrentArtUrl;
@@ -120,7 +126,7 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
         @Override
         public void onMetadataChanged(MediaMetadataCompat metadata) {
             if (metadata != null) {
-                updateMediaDescription(metadata.getDescription());
+                updateMediaDescription(MediaIDHelper.getDescriptionWithRating(metadata));
                 updateDuration(metadata);
             }
         }
@@ -153,6 +159,8 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
         mPauseDrawable = ContextCompat.getDrawable(this, R.drawable.uamp_ic_pause_white_48dp);
         mPlayDrawable = ContextCompat.getDrawable(this, R.drawable.uamp_ic_play_arrow_white_48dp);
         mPlayPause = (ImageView) findViewById(R.id.play_pause);
+        mStarOff = ContextCompat.getDrawable(this, R.drawable.ic_star_off);
+        mStarOn = ContextCompat.getDrawable(this, R.drawable.ic_star_on);
         mSkipNext = (ImageView) findViewById(R.id.next);
         mSkipPrev = (ImageView) findViewById(R.id.prev);
         mStart = (TextView) findViewById(R.id.startText);
@@ -161,6 +169,11 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
         mLine1 = (TextView) findViewById(R.id.line1);
         mLine2 = (TextView) findViewById(R.id.line2);
         mLine3 = (TextView) findViewById(R.id.line3);
+        mStars[0] = (ImageView) findViewById(R.id.star1);
+        mStars[1] = (ImageView) findViewById(R.id.star2);
+        mStars[2] = (ImageView) findViewById(R.id.star3);
+        mStars[3] = (ImageView) findViewById(R.id.star4);
+        mStars[4] = (ImageView) findViewById(R.id.star5);
         mLoading = (ProgressBar) findViewById(R.id.progressBar1);
         mControllers = findViewById(R.id.controllers);
 
@@ -247,7 +260,7 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
         updatePlaybackState(state);
         MediaMetadataCompat metadata = mediaController.getMetadata();
         if (metadata != null) {
-            updateMediaDescription(metadata.getDescription());
+            updateMediaDescription(MediaIDHelper.getDescriptionWithRating(metadata));
             updateDuration(metadata);
         }
         updateProgress();
@@ -349,6 +362,19 @@ public class FullScreenPlayerActivity extends ActionBarCastActivity {
         LogHelper.d(TAG, "updateMediaDescription called ");
         mLine1.setText(description.getTitle());
         mLine2.setText(description.getSubtitle());
+        Bundle extras = description.getExtras();
+        int rating = 0;
+        if (extras != null) {
+            float ratingCompat = extras.getFloat(MediaMetadataCompat.METADATA_KEY_RATING, (float)-1);
+            if (ratingCompat >=(float)0) {
+                rating = (int)(ratingCompat * 5.0);
+            }
+        }
+        for (int i = 0; i<5; i++)
+        {
+            mStars[i].setImageDrawable(i < rating ? mStarOn : mStarOff);
+        }
+
         fetchImageAsync(description);
     }
 

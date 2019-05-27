@@ -19,6 +19,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.RatingCompat;
 
 import com.antlersoft.patchyamp.db.ConnectionBean;
 import com.antoniotari.reactiveampache.Exceptions.AmpacheApiException;
@@ -80,6 +81,7 @@ public class AmpacheSource implements MusicProviderSource {
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.getTitle())
                 .putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, song.getTrack())
                 .putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, song.getTrack()+1)
+                .putRating(MediaMetadataCompat.METADATA_KEY_RATING, RatingCompat.newPercentageRating((float)(song.getRating()/5.0)))
                 .build();
     }
 

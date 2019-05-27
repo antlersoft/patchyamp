@@ -35,9 +35,12 @@
 package com.example.android.uamp.utils;
 
 import android.content.Context;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaDescriptionCompat;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.text.TextUtils;
 
@@ -194,5 +197,28 @@ public class MediaIDHelper {
             }
         }
         return false;
+    }
+
+    public static MediaDescriptionCompat getDescriptionWithRating(MediaMetadataCompat metadata) {
+        MediaDescriptionCompat description = metadata.getDescription();
+        Bundle extras = description.getExtras();
+        if (extras == null) {
+            extras = new Bundle();
+            description = new MediaDescriptionCompat.Builder()
+                    .setExtras(extras)
+                    .setDescription(description.getDescription())
+                    .setIconBitmap(description.getIconBitmap())
+                    .setIconUri(description.getIconUri())
+                    .setMediaId(description.getMediaId())
+                    .setMediaUri(description.getMediaUri())
+                    .setSubtitle(description.getSubtitle())
+                    .setTitle(description.getTitle())
+                    .build();
+        }
+        if (extras.getFloat(MediaMetadataCompat.METADATA_KEY_RATING, (float)-1) < 0) {
+            extras.putFloat(MediaMetadataCompat.METADATA_KEY_RATING,
+                    metadata.getRating(MediaMetadataCompat.METADATA_KEY_RATING).getPercentRating());
+        }
+        return description;
     }
 }

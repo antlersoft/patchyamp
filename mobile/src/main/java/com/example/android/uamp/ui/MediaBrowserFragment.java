@@ -327,7 +327,7 @@ public class MediaBrowserFragment extends Fragment {
         mediaBrowser.getItem(mMediaId, new MediaBrowserCompat.ItemCallback() {
             @Override
             public void onItemLoaded(MediaBrowserCompat.MediaItem item) {
-                if (mMediaFragmentListener != null) {
+                if (mMediaFragmentListener != null && item!=null) {
                     mMediaFragmentListener.setToolbarTitle(
                             item.getDescription().getTitle());
                 }
