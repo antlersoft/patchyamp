@@ -36,13 +36,17 @@ package com.example.android.uamp.ui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
+import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
@@ -64,16 +68,27 @@ public class MediaItemViewHolder {
 
     private static ColorStateList sColorStatePlaying;
     private static ColorStateList sColorStateNotPlaying;
+    private static Drawable mCircleOn;
+    private static Drawable mCircleOff;
+    private static Drawable mEmptyDrawable=new ColorDrawable(Color.TRANSPARENT);
 
     ImageView mImageView;
     TextView mTitleView;
     TextView mDescriptionView;
+    ImageView[] mCircle = new ImageView[5];
 
     // Returns a view for use in media item list.
     static View setupListView(Activity activity, View convertView, ViewGroup parent,
                               MediaBrowserCompat.MediaItem item) {
         if (sColorStateNotPlaying == null || sColorStatePlaying == null) {
             initializeColorStateLists(activity);
+        }
+        if (mCircleOn == null) {
+            mCircleOn = ContextCompat.getDrawable(activity, R.drawable.circle_on);
+            mEmptyDrawable.setBounds(0, 0, mCircleOn.getMinimumWidth(), mCircleOn.getMinimumHeight());
+        }
+        if (mCircleOff == null) {
+            mCircleOff = ContextCompat.getDrawable(activity, R.drawable.circle_off);
         }
 
         MediaItemViewHolder holder;
@@ -87,6 +102,11 @@ public class MediaItemViewHolder {
             holder.mImageView = (ImageView) convertView.findViewById(R.id.play_eq);
             holder.mTitleView = (TextView) convertView.findViewById(R.id.title);
             holder.mDescriptionView = (TextView) convertView.findViewById(R.id.description);
+            holder.mCircle[0] = (ImageView) convertView.findViewById(R.id.item_star1);
+            holder.mCircle[1] = (ImageView) convertView.findViewById(R.id.item_star2);
+            holder.mCircle[2] = (ImageView) convertView.findViewById(R.id.item_star3);
+            holder.mCircle[3] = (ImageView) convertView.findViewById(R.id.item_star4);
+            holder.mCircle[4] = (ImageView) convertView.findViewById(R.id.item_star5);
             convertView.setTag(holder);
         } else {
             holder = (MediaItemViewHolder) convertView.getTag();
@@ -96,6 +116,22 @@ public class MediaItemViewHolder {
         MediaDescriptionCompat description = item.getDescription();
         holder.mTitleView.setText(description.getTitle());
         holder.mDescriptionView.setText(description.getSubtitle());
+        Bundle extras = description.getExtras();
+        int rating = 0;
+        if (extras != null) {
+            float ratingCompat = extras.getFloat(MediaMetadataCompat.METADATA_KEY_RATING, (float)-1);
+            if (ratingCompat >=(float)0) {
+                rating = (int)(ratingCompat * 5.0);
+            }
+        }
+        for (int i = 0; i<5; i++)
+        {
+            if (item.isPlayable()) {
+                holder.mCircle[i].setImageDrawable(i < rating ? mCircleOn : mCircleOff);
+            } else {
+                holder.mCircle[i].setImageDrawable(mEmptyDrawable);
+            }
+        }
 
         // If the state of convertView is different, we need to adapt the view to the
         // new state.

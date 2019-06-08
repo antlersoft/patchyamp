@@ -49,16 +49,70 @@
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:textColor="?android:attr/textColorPrimary"/>
 
-        <TextView
-            android:id="@+id/description"
-            tools:text="John Doe, his brothers, his sisters, his pets and his more than amazing band"
+        <LinearLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="?android:attr/textColorSecondary"/>
+            android:orientation="horizontal"
+            >
+            <TextView
+                android:id="@+id/description"
+                tools:text="John Doe, his brothers, his sisters, his pets and his more than amazing band"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="4"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textColor="?android:attr/textColorSecondary"/>
 
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:layout_weight="1"
+                >
+                <ImageView
+                    android:id="@+id/item_star1"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"
+                    android:src="@drawable/circle_off"
+                    />
+                <ImageView
+                    android:id="@+id/item_star2"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"
+                    android:src="@drawable/circle_off"
+                    />
+                <ImageView
+                    android:id="@+id/item_star3"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"
+                    android:src="@drawable/circle_off"
+                    />
+                <ImageView
+                    android:id="@+id/item_star4"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"
+                    android:src="@drawable/circle_off"
+                    />
+                <ImageView
+                    android:id="@+id/item_star5"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"
+                    android:src="@drawable/circle_off"
+                    />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
 </RelativeLayout>
